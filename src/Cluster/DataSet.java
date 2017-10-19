@@ -20,10 +20,11 @@ public class DataSet implements MultivariateFunction{
     
     Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
     Vector<Integer> activeSiteVector = new Vector<Integer>();  // List of sites that are actively considered
-    Vector<Integer> allSiteVector = new Vector<Integer>();// List of sites
+    Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites
     
     int nHaplo = 3; // Number of haplotypes
-    int nAssignments = 0; // number of possible assignments
+    int maxBases = 2; // maximum number of different bases
+    int[] nAssignments = null; // number of possible assignments
     int[][] assign = null; // different possible assignments
     boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
     int nTimePoints = 0;   // Number of time points
@@ -37,11 +38,16 @@ public class DataSet implements MultivariateFunction{
 //    double S = 0.0001;
 //    double F0 = 0.01;
 
-    DataSet(String fileNameFile, int nHaplo, int nAssignments, int[][] assign, boolean addFlat) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, int maxBases, int[] nAssignments, int[][] assign, boolean addFlat) {  // Read in data
         this.nHaplo = nHaplo;
+        this.maxBases = maxBases;
         this.nAssignments = nAssignments;
         this.assign = assign;
         this.addFlat = addFlat;
+        if (addFlat)  {
+            System.out.println("addFlat not yet implemented");
+            System.exit(1);
+        }
         Vector<String> fileNameVector = new Vector<String>(); // list of files to be read in one for each time point
         try {
             FileReader file = new FileReader(fileNameFile); 
@@ -79,11 +85,11 @@ public class DataSet implements MultivariateFunction{
                             int iSite = assembly.getISite();    // assign to a given site
                             if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                                 allSiteVector.add(iSite);
-                                Site newSite = new Site(iSite, nTimePoints, nHaplo, nAssignments, assign); // create new site if needed
+                                Site newSite = new Site(iSite, nTimePoints, nHaplo, maxBases, nAssignments, assign); // create new site if needed
                                 siteHash.put(iSite, newSite);
                             }
                             siteHash.get(iSite).addAssembly(iTimePoint, assembly);  // add datapoint to site
-                            }
+                        }
                     }
                 }
             }

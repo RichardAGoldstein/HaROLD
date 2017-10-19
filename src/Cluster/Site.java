@@ -22,7 +22,8 @@ public class Site {
     int iSite;
     int nTimePoints;
     int nHaplo = 0;
-    int nAssignments = 0;
+    int maxBases = 2;
+    int[] nAssignments = null;
     int[][] assign = null;
     double[] assignmentProbs = null;
     int currentAssignment = 0;
@@ -55,10 +56,11 @@ public class Site {
     double S_loc = 0.0;
     double F0_loc = 0.0;
     
-    Site(int iSite, int nTimePoints, int nHaplo, int nAssignments, int[][] assign) {
+    Site(int iSite, int nTimePoints, int nHaplo, int maxBases, int[] nAssignments, int[][] assign) {
         this.iSite = iSite;
         this.nTimePoints = nTimePoints;
         this.nHaplo = nHaplo;
+        this.maxBases = maxBases;
         this.nAssignments = nAssignments;
         this.assign = assign;
         assemblies = new Assembly[nTimePoints]; 
@@ -69,7 +71,7 @@ public class Site {
         logStrandChoose = new double[nTimePoints][2]; 
         logTotChoose = new double[nTimePoints];
         missing = new boolean[nTimePoints];
-        logLikeAssignPoly = new double[nTimePoints][nAssignments];
+        logLikeAssignPoly = new double[nTimePoints][nAssignments[maxBases]];
         probStrand = new double[nTimePoints][2];
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             missing[iTimePoint] = true; // initially assume data point doesn't exist
@@ -175,7 +177,7 @@ public class Site {
 //            double[][] logLikeAssignPoly = new double[nTimePoints][nAssignments];
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 if (!missing[iTimePoint]){
-                    for (int iAssignment = 1; iAssignment < nAssignments-1; iAssignment++) {
+                    for (int iAssignment = 1; iAssignment < nAssignments[maxBases]-1; iAssignment++) {
                         double[] sumAlpha = new double[2];
                         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                             sumAlpha[assign[iAssignment][iHaplo]] += alpha_loc[iTimePoint][iHaplo];
@@ -192,7 +194,7 @@ public class Site {
     
     
     double computeLogLikelihoodAlpha(double[] alpha, int iTimePoint) { // alpha[][] = iTP, iHaplo, iTP
-        if (currentAssignment == 0 || currentAssignment == nAssignments-1 || missing[iTimePoint]) {
+        if (currentAssignment == 0 || currentAssignment == nAssignments[maxBases]-1 || missing[iTimePoint]) {
             return 0.0;
         }
         double totalProb = 0.0;
@@ -210,18 +212,18 @@ public class Site {
 
         
     double computeLogLikelihood(double alpha_e, double beta_e, double S, double F0, boolean printHaplo) { // alpha[][] = iHaplo, iTP
-        double[] logLikeAssign = new double[nAssignments];  // log likelihood of the site for each assignment
+        double[] logLikeAssign = new double[nAssignments[maxBases]];  // log likelihood of the site for each assignment
         double totalProb = 0.0;
-        assignmentProbs = new double[nAssignments];
+        assignmentProbs = new double[nAssignments[maxBases]];
         double[][] likeAssignSNoS = new double[nTimePoints][2];
-        for (int iAssignment = 0; iAssignment < nAssignments; iAssignment++) {
+        for (int iAssignment = 0; iAssignment < nAssignments[maxBases]; iAssignment++) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 if (missing[iTimePoint]) {
                     likeAssignSNoS[iTimePoint][0] = 1.0;
                     likeAssignSNoS[iTimePoint][1] = 0.0;
                 }
                 if (!missing[iTimePoint]) {
-                    double[][][] probStrandSNoS = new double[nAssignments][2][2];
+                    double[][][] probStrandSNoS = new double[nAssignments[maxBases]][2][2];
                     
                     if (iAssignment == 0) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
@@ -237,7 +239,7 @@ public class Site {
                         likeAssignSNoS[iTimePoint][0] += probStrandSNoS[iAssignment][0][0]*probStrandSNoS[iAssignment][1][0];
                         likeAssignSNoS[iTimePoint][1] += probStrand[iTimePoint][0]*probStrand[iTimePoint][1]
                                 - probStrandSNoS[iAssignment][0][0]*probStrandSNoS[iAssignment][1][0];
-                    } else if (iAssignment == nAssignments - 1) {
+                    } else if (iAssignment == nAssignments[maxBases] - 1) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
                             double logProbTerm = logStrandChoose[iTimePoint][iStrand]
                                 + Beta.logBeta(strandData[iTimePoint][iStrand][0]+alpha_e, strandData[iTimePoint][iStrand][1]+beta_e)
@@ -267,10 +269,10 @@ public class Site {
                 }  // end of conditional on timepoint existing
             }   // end of loop over timepoints
  
-            if (iAssignment == 0 || iAssignment == nAssignments - 1) {
+            if (iAssignment == 0 || iAssignment == nAssignments[maxBases] - 1) {
                 assignmentProbs[iAssignment] = (1.0 - F0) * 0.5 * Math.exp(logLikeAssign[iAssignment]);
             } else {
-                assignmentProbs[iAssignment] += (F0 / (nAssignments - 2.0)) * Math.exp(logLikeAssign[iAssignment]);
+                assignmentProbs[iAssignment] += (F0 / (nAssignments[maxBases] - 2.0)) * Math.exp(logLikeAssign[iAssignment]);
             }
             totalProb += assignmentProbs[iAssignment];
         } // end of loop over assignments
@@ -283,7 +285,7 @@ public class Site {
             System.out.print(iSite);
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                 double[] sumProb = new double[2];
-                for (int iAssignment = 0; iAssignment < nAssignments; iAssignment++) {
+                for (int iAssignment = 0; iAssignment < nAssignments[maxBases]; iAssignment++) {
                     sumProb[assign[iAssignment][iHaplo]] += assignmentProbs[iAssignment];
                 }
                 if (sumProb[0] > sumProb[1]) {
