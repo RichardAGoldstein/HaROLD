@@ -51,7 +51,6 @@ public class Assembly {
                 double ratio = (strandReads[0][iBase]+1.0)/(reads[iBase]+2.0);
                 double zScore = Math.abs(ratio-0.5)*Math.sqrt(2.0*reads[iBase]);
                 double pVal = (1.0 - Erf.erf(zScore));
-//                System.out.println(iSite + "\t" + Arrays.toString(reads) + "\t" + pVal);
                 minAmt[iBase] = (pVal/(0.01 + pVal))  // consider lowest CI value
                     * inverseBeta(0.025, (0.5+reads[iBase]), (0.5+totReads-reads[iBase]));
             }
