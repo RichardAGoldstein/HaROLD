@@ -26,7 +26,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
 public class Cluster {
     
     int nHaplo = 3; // Number of haplotypes
-    int maxBases = 4; // Maximum number of different bases 
+    int maxBases = 2; // Maximum number of different bases 
     int[] nAssignments = new int[maxBases+1]; // number of possible assignments
     int[][] assign = null; // different possible assignments of bases to haplotypes
     boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***

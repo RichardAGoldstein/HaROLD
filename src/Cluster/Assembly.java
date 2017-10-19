@@ -56,7 +56,6 @@ public class Assembly {
                     * inverseBeta(0.025, (0.5+reads[iBase]), (0.5+totReads-reads[iBase]));
             }
         }
-        System.out.println(iSite + "\t" + Arrays.toString(reads) + "\t" + Arrays.toString(minAmt));
     }
     
     boolean isConserved() {

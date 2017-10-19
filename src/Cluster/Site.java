@@ -6,6 +6,8 @@
 package Cluster;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
 import org.apache.commons.math3.special.Beta;
@@ -23,6 +25,7 @@ public class Site {
     int nTimePoints;
     int nHaplo = 0;
     int maxBases = 2;
+    int nBases = 0;
     int[] nAssignments = null;
     int[][] assign = null;
     double[] assignmentProbs = null;
@@ -45,7 +48,7 @@ public class Site {
   
     boolean variable = false;
     boolean uncertain = false;
-    boolean active = false;
+    boolean active = true;
     boolean[] missing = null;   // time point is missing
     
     boolean trial = false;
@@ -85,6 +88,9 @@ public class Site {
     
     boolean process() {
         identifyActive();
+        if (!active) {
+            return false;
+        }
         if (uncertain) {
             return false;
         }
@@ -92,44 +98,50 @@ public class Site {
         return ((Cluster.random.nextDouble() < Cluster.useFrac) && nActiveBase > 0);
     }
     
-    void identifyActive() {  // identify which two bases dominate
-        double[] totAmt = new double[4];    // accumulate minimal sums
-        double sumTotAmt = 0.0;
+    void identifyActive() {  // identify which bases dominate
+        double[] maxMinAmt = new double[4];    // accumulate minimal sums
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
                 for (int iBase = 0; iBase < 4; iBase++) {
-                    totAmt[iBase] += assemblies[iTimePoint].getMinAmt()[iBase];
-                    sumTotAmt += assemblies[iTimePoint].getMinAmt()[iBase];
+                    maxMinAmt[iBase] = Math.max(maxMinAmt[iBase], assemblies[iTimePoint].getMinAmt()[iBase]);
                 }
             }
         }
-        double maxVal = -999.0;
+        Vector<Double> maxMinAmtVector = new Vector<>();
+        Hashtable<Double, Integer> maxMinAmtHash = new Hashtable<>();
         for (int iBase = 0; iBase < 4; iBase++) {
-            totAmt[iBase] /= sumTotAmt;
-            if (totAmt[iBase] > maxVal) {
-                maxVal = totAmt[iBase];
-                activeBase[0] = iBase;
+            if (maxMinAmt[iBase] > 1.0E-8) {
+                maxMinAmtVector.add(maxMinAmt[iBase]);
+                maxMinAmtHash.put(maxMinAmt[iBase], iBase);
             }
         }
-        
-        maxVal = 1.0E-8;
-        for (int iBase = 0; iBase < 4; iBase++) {
-            if (iBase != activeBase[0] && totAmt[iBase] > maxVal) {
-                maxVal = totAmt[iBase];
-                activeBase[1] = iBase;
+        if (maxMinAmtVector.size() == 0) {
+            active = false;
+        } else {
+            Collections.sort(maxMinAmtVector);
+            nActiveBase = Math.min(maxBases, maxMinAmtVector.size());
+            activeBase = new int[nActiveBase];
+            for (int iPoint = 0; iPoint < nActiveBase; iPoint++) {
+                int iBase = maxMinAmtVector.size() - 1 - iPoint;
+                activeBase[iPoint] = maxMinAmtHash.get(maxMinAmtVector.get(iBase));
+            } 
+            
+            if (maxMinAmtVector.size() > maxBases) {
+                int iPoint = maxMinAmtVector.size() - 1 - maxBases;
+                int aBase = maxMinAmtHash.get(maxMinAmtVector.get(iPoint));
+                System.out.println(aBase);
+                if (maxMinAmt[aBase] > 0.001) {
+                    System.out.println("Site " + iSite + " Ignoring " 
+                            + baseString[maxMinAmtHash.get(maxMinAmtVector.get(iPoint))] 
+                            + "\t" + maxMinAmtVector.get(iPoint) + "\t" + maxMinAmtHash.get(maxMinAmtVector.get(iPoint)));
+                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                        if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
+                            System.out.println(Arrays.toString(assemblies[iTimePoint].strandReads[0]) + " " + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
+                        }   
+                    }
+                    System.out.println();
+                }
             }
-        }
-        
-        maxVal = 0.00001;
-        for (int iBase = 0; iBase < 4; iBase++) {
-            if (iBase != activeBase[0] && iBase != activeBase[1] && totAmt[iBase] > maxVal) {
-                maxVal = totAmt[iBase];
-            }
-        }
-        if (maxVal > 0.05) { // third base present at appreciable levels
-            uncertain = true;
-            if (Cluster.verbose) System.out.println("zzz\tSite " + iSite +  " ambiguous: " 
-                + Arrays.toString(totAmt));
         }
     }
     
@@ -137,7 +149,7 @@ public class Site {
         for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
             if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    for (int iActive = 0; iActive < 2; iActive++) {
+                    for (int iActive = 0; iActive < nActiveBase; iActive++) {
                         if (activeBase[iActive] >= 0) {
                             strandData[iTimePoint][iStrand][iActive] = 
                                 assemblies[iTimePoint].strandReads[iStrand][activeBase[iActive]];

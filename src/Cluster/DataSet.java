@@ -32,11 +32,6 @@ public class DataSet implements MultivariateFunction{
     int iter = 0;  // Initialise count of iterations   
     int iStage = 0;
     int iTimePoint = 0;
-    
-//    double alpha_e = 0.1;
-//    double beta_e = 10.0;
-//    double S = 0.0001;
-//    double F0 = 0.01;
 
     DataSet(String fileNameFile, int nHaplo, int maxBases, int[] nAssignments, int[][] assign, boolean addFlat) {  // Read in data
         this.nHaplo = nHaplo;
