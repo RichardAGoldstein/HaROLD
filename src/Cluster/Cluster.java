@@ -2,6 +2,7 @@ package Cluster;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Vector;
 import org.apache.commons.math3.optim.InitialGuess;
 import org.apache.commons.math3.optim.MaxEval;
 import org.apache.commons.math3.optim.OptimizationData;
@@ -25,6 +26,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
 public class Cluster {
     
     int nHaplo = 3; // Number of haplotypes
+    int maxBases = 2; // Maximum number of different bases 
     int nAssignments = 0; // number of possible assignments
     int[][] assign = null; // different possible assignments of bases to haplotypes
     boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***
@@ -37,9 +39,7 @@ public class Cluster {
     double beta_e = 10.0;
     double F0 = 0.02;
     double S = 0.0001;
-//    double[][] alpha = null;
-    double[][] alpha = {{0.3904,1.889},{4.3321,8.4047},{6.9142,11.7717},{9.8596,12.9925},{6.6161,10.8112},
-            {9.5218,10.8302},{13.3333,9.0419},{11.9004,6.5896},{20.9773,4.6513},{22.4221,3.0989}};
+    double[][] alpha = null;
     
     static Random random = new Random();
     static boolean verbose = true; // print lots of intermediate results
@@ -57,9 +57,9 @@ public class Cluster {
     }
 
     Cluster(String[] args) {
-        if (args.length == 0) {
+        if (args.length < 2) {
             System.out.println("First argument is file containing list of count files");
-            System.out.println("First argument is number of haplotypes");
+            System.out.println("Second argument is number of haplotypes");
             System.exit(1);
         }
         nHaplo = Integer.parseInt(args[1]);  // number of haplotypes
@@ -70,16 +70,16 @@ public class Cluster {
     void run(String[] args) {
         // Initialise stuff
         DataSet dataSet = new DataSet(args[0], nHaplo, nAssignments, assign, addFlat); // Construct dataset
-//        alpha = new double[dataSet.getNTimePoints()][nHaplo];
+        alpha = new double[dataSet.getNTimePoints()][nHaplo];
         lb_alpha = new double[nHaplo];
         Arrays.fill(lb_alpha, 1.0E-8);
         ub_alpha = new double[nHaplo];
         Arrays.fill(ub_alpha, 100.0);
-//        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-//            for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
-//                alpha[iTimePoint][iHaplo] = 2.0 * random.nextDouble();
-//            }
-//        }
+        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+            for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
+                alpha[iTimePoint][iHaplo] = 2.0 * random.nextDouble();
+            }
+        }
         
         
         
@@ -182,18 +182,46 @@ public class Cluster {
     }
        
     void constructAssignments() {
-        int[] powersOfTwo = new int[nHaplo+1];
-        powersOfTwo[0]=1;
-        for (int iPow = 1; iPow < nHaplo+1; iPow++) {
-            powersOfTwo[iPow] = powersOfTwo[iPow-1]*2;
-        }
-        nAssignments = powersOfTwo[nHaplo];  // All ways of distributing variants amongst haplotypes
-        assign = new int[nAssignments][nHaplo];    //  List of possible assignments
-        for (int iAssignment = 0; iAssignment<nAssignments; iAssignment++) {
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                if (((iAssignment) & powersOfTwo[iHaplo]) > 0) assign[iAssignment][iHaplo] = 1;  // generating all possibilities
+        Vector<int[]> assignmentVector = new Vector<>();
+        int nAssigns = pow(maxBases, nHaplo);
+        for (int iMax = 0; iMax < maxBases; iMax++) {
+            int[] assign = new int[nHaplo];
+            if (iMax == 0) {
+                int[] copyAssign = Arrays.copyOf(assign, nHaplo);
+                assignmentVector.add(copyAssign);
+            } else {
+                for (int iAssign = 1; iAssign < nAssigns; iAssign++) {
+                    assign[0]++;
+                    for (int iHaplo = 0; iHaplo < (nHaplo-1); iHaplo++) {
+                        if (assign[iHaplo] >= maxBases) {
+                            assign[iHaplo] = 0;
+                            assign[iHaplo+1]++;
+                        }
+                    }
+                    boolean[] basePresent = new boolean[maxBases];
+                    for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                        basePresent[assign[iHaplo]] = true;
+                    }
+                    boolean ok = true;
+                    for (int iBase = 0; iBase <= iMax; iBase++) {
+                        ok = ok && basePresent[iBase];                
+                    }
+                    for (int iBase = iMax+1; iBase < maxBases; iBase++) {
+                        ok = ok && !basePresent[iBase];
+                    }
+                    if (ok) {
+                        int[] copyAssign = Arrays.copyOf(assign, nHaplo);
+                        assignmentVector.add(copyAssign);
+                    }
+                }
             }
-        } 
+        }
+        nAssignments = assignmentVector.size();
+        assign = new int[nAssignments][nHaplo];
+        for (int iAssign = 0; iAssign < nAssignments; iAssign++) {
+            assign[iAssign] = Arrays.copyOf(assignmentVector.get(iAssign), nHaplo);
+        }
+
         if (verbose) {
             System.out.println("zzz\tVarious assignments");
             for (int iAssignment = 0; iAssignment < nAssignments; iAssignment++) {
@@ -218,5 +246,11 @@ public class Cluster {
         }
     }
     
-    
+    int pow (int a, int b) {
+        if ( b == 0)     return 1;
+        if ( b == 1)     return a;
+        if (b%2 == 0)    return     pow ( a * a, b/2); //even a=(a^2)^b/2
+        else             return a * pow ( a * a, (b-1)/2); //odd  a=a*(a^2)^b/2
+    }
+
 }
