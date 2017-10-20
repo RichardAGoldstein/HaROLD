@@ -7,6 +7,7 @@ package Cluster;
 
 import java.util.*;
 import org.apache.commons.math3.distribution.BetaDistribution;
+import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.special.Beta;
 import org.apache.commons.math3.special.Erf;
 import org.apache.commons.math3.special.Gamma;
@@ -34,18 +35,30 @@ public class Assembly {
         String[] words = inputLine.split(",");
         iSite = Integer.parseInt(words[0]);
 
+        int[] totStrand = new int[2];
         for (int iBase = 0; iBase < 4; iBase++) {
             for (int iStrand = 0; iStrand < 2; iStrand++) {
                 strandReads[iStrand][iBase]=Integer.parseInt(words[(2*iBase)+iStrand+3]);
+                totStrand[iStrand] += strandReads[iStrand][iBase];
             }
             reads[iBase] = strandReads[0][iBase]+strandReads[1][iBase];
             totReads += reads[iBase];
         }
         if (totReads == 0) {
             hasData = false;
+
         } else if (Math.max(Math.max(reads[0],reads[1]),Math.max(reads[2],reads[3])) == totReads) {
             conserved = true;
         } // estimate lower bound on number of reads of each base
+        double bias = Math.abs(totStrand[0]-totStrand[1]) / (Math.sqrt(totStrand[0]) + Math.sqrt(totStrand[1]));
+        if (totReads > 99) {
+            System.out.print(iSite + "\t" + bias);
+            BinomialDistribution bd = new BinomialDistribution(totReads, 0.5);
+            int n1 = bd.sample();
+            int n2 = totReads - n1;
+            bias = Math.abs(n1-n2) / (Math.sqrt(n1) + Math.sqrt(n2));
+            System.out.println("\t" + bias + "\t" + totStrand[0] + "\t" + totStrand[1] );
+        }
         for (int iBase = 0; iBase < 4; iBase++) {
             if (reads[iBase] > 0) {   // downweight for excessive strand bias
                 double ratio = (strandReads[0][iBase]+1.0)/(reads[iBase]+2.0);

@@ -20,10 +20,8 @@ public class DataSet implements MultivariateFunction{
     
     Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
     Vector<Integer> activeSiteVector = new Vector<Integer>();  // List of sites that are actively considered
-    Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites
-    
+    Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites  
     int nHaplo = 3; // Number of haplotypes
-    int maxBases = 2; // maximum number of different bases
     int[] nAssignments = null; // number of possible assignments
     int[][] assign = null; // different possible assignments
     boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
@@ -33,9 +31,8 @@ public class DataSet implements MultivariateFunction{
     int iStage = 0;
     int iTimePoint = 0;
 
-    DataSet(String fileNameFile, int nHaplo, int maxBases, int[] nAssignments, int[][] assign, boolean addFlat) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, int[] nAssignments, int[][] assign, boolean addFlat) {  // Read in data
         this.nHaplo = nHaplo;
-        this.maxBases = maxBases;
         this.nAssignments = nAssignments;
         this.assign = assign;
         this.addFlat = addFlat;
@@ -80,7 +77,7 @@ public class DataSet implements MultivariateFunction{
                             int iSite = assembly.getISite();    // assign to a given site
                             if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                                 allSiteVector.add(iSite);
-                                Site newSite = new Site(iSite, nTimePoints, nHaplo, maxBases, nAssignments, assign); // create new site if needed
+                                Site newSite = new Site(iSite, nTimePoints, nHaplo, nAssignments, assign); // create new site if needed
                                 siteHash.put(iSite, newSite);
                             }
                             siteHash.get(iSite).addAssembly(iTimePoint, assembly);  // add datapoint to site
@@ -95,10 +92,11 @@ public class DataSet implements MultivariateFunction{
         }
         for (int iSite : allSiteVector) {  // Create activeSiteVector
             Site site = siteHash.get(iSite);
-            if (site.process()) {    // Decide which bases are most present at that site and do simple sums
-                activeSiteVector.add(iSite);
-            } 
+//            if (site.process()) {    // Decide which bases are most present at that site and do simple sums
+//                activeSiteVector.add(iSite);
+//            } 
         }
+        System.exit(1);
     }
     
     int getNTimePoints() {

@@ -19,12 +19,10 @@ import org.apache.commons.math3.util.CombinatoricsUtils;
  * 
  * @author rgoldst
  */
-public class Site {
-    
+public class Site {   
     int iSite;
     int nTimePoints;
     int nHaplo = 0;
-    int maxBases = 2;
     int nBases = 0;
     int[] nAssignments = null;
     int[][] assign = null;
@@ -59,11 +57,10 @@ public class Site {
     double S_loc = 0.0;
     double F0_loc = 0.0;
     
-    Site(int iSite, int nTimePoints, int nHaplo, int maxBases, int[] nAssignments, int[][] assign) {
+    Site(int iSite, int nTimePoints, int nHaplo, int[] nAssignments, int[][] assign) {
         this.iSite = iSite;
         this.nTimePoints = nTimePoints;
         this.nHaplo = nHaplo;
-        this.maxBases = maxBases;
         this.nAssignments = nAssignments;
         this.assign = assign;
         assemblies = new Assembly[nTimePoints]; 
@@ -74,7 +71,7 @@ public class Site {
         logStrandChoose = new double[nTimePoints][2]; 
         logTotChoose = new double[nTimePoints];
         missing = new boolean[nTimePoints];
-        logLikeAssignPoly = new double[nTimePoints][nAssignments[maxBases]];
+        logLikeAssignPoly = new double[nTimePoints][nAssignments[Cluster.maxBases]];
         probStrand = new double[nTimePoints][2];
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             missing[iTimePoint] = true; // initially assume data point doesn't exist
@@ -99,18 +96,26 @@ public class Site {
     }
     
     void identifyActive() {  // identify which bases dominate
+        System.out.println(iSite);
         double[] maxMinAmt = new double[4];    // accumulate minimal sums
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
+            if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
+                System.out.println("\t" + iTimePoint + "\t" + Arrays.toString(assemblies[iTimePoint].getMinAmt()));
                 for (int iBase = 0; iBase < 4; iBase++) {
                     maxMinAmt[iBase] = Math.max(maxMinAmt[iBase], assemblies[iTimePoint].getMinAmt()[iBase]);
+                    if ((assemblies[iTimePoint].getMinAmt()[iBase] < Cluster.minMinAmt) && (assemblies[iTimePoint].reads[iBase] > 0)) {
+                        System.out.println("jjj\t" + Arrays.toString(assemblies[iTimePoint].getMinAmt()) + "\t" 
+                                + Arrays.toString(assemblies[iTimePoint].strandReads[0]) 
+                                + "\t" + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
+                    }
                 }
+                
             }
         }
         Vector<Double> maxMinAmtVector = new Vector<>();
         Hashtable<Double, Integer> maxMinAmtHash = new Hashtable<>();
         for (int iBase = 0; iBase < 4; iBase++) {
-            if (maxMinAmt[iBase] > 1.0E-8) {
+            if (maxMinAmt[iBase] > Cluster.minMinAmt) {
                 maxMinAmtVector.add(maxMinAmt[iBase]);
                 maxMinAmtHash.put(maxMinAmt[iBase], iBase);
             }
@@ -118,31 +123,28 @@ public class Site {
         if (maxMinAmtVector.size() == 0) {
             active = false;
         } else {
-            Collections.sort(maxMinAmtVector);
-            nActiveBase = Math.min(maxBases, maxMinAmtVector.size());
+            Collections.sort(maxMinAmtVector, Collections.reverseOrder());
+            nActiveBase = Math.min(Cluster.maxBases, maxMinAmtVector.size());
             activeBase = new int[nActiveBase];
-            for (int iPoint = 0; iPoint < nActiveBase; iPoint++) {
-                int iBase = maxMinAmtVector.size() - 1 - iPoint;
-                activeBase[iPoint] = maxMinAmtHash.get(maxMinAmtVector.get(iBase));
+            for (int iBase = 0; iBase < nActiveBase; iBase++) {   // Vector in increasing order
+                activeBase[iBase] = maxMinAmtHash.get(maxMinAmtVector.get(iBase));
             } 
             
-            if (maxMinAmtVector.size() > maxBases) {
-                int iPoint = maxMinAmtVector.size() - 1 - maxBases;
-                int aBase = maxMinAmtHash.get(maxMinAmtVector.get(iPoint));
-                System.out.println(aBase);
-                if (maxMinAmt[aBase] > 0.001) {
-                    System.out.println("Site " + iSite + " Ignoring " 
-                            + baseString[maxMinAmtHash.get(maxMinAmtVector.get(iPoint))] 
-                            + "\t" + maxMinAmtVector.get(iPoint) + "\t" + maxMinAmtHash.get(maxMinAmtVector.get(iPoint)));
-                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                        if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
-                            System.out.println(Arrays.toString(assemblies[iTimePoint].strandReads[0]) + " " + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
-                        }   
-                    }
-                    System.out.println();
+            if (maxMinAmtVector.size() > Cluster.maxBases) {
+                int iBase = maxMinAmtHash.get(maxMinAmtVector.get(Cluster.maxBases));
+                System.out.println(iBase);
+                System.out.println("Site " + iSite + " Ignoring " + iBase + "\t"  
+                        + baseString[iBase] 
+                        + "\t" + maxMinAmtVector.get(Cluster.maxBases) + "\t" + maxMinAmtHash.get(maxMinAmtVector.get(Cluster.maxBases)));
+                for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                    if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
+                        System.out.println(Arrays.toString(assemblies[iTimePoint].strandReads[0]) + " " + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
+                    }   
                 }
+                System.out.println();
             }
         }
+        System.out.println("\t" + Arrays.toString(activeBase) + "\n");
     }
     
     void makeSums() {
@@ -189,7 +191,7 @@ public class Site {
 //            double[][] logLikeAssignPoly = new double[nTimePoints][nAssignments];
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 if (!missing[iTimePoint]){
-                    for (int iAssignment = 1; iAssignment < nAssignments[maxBases]-1; iAssignment++) {
+                    for (int iAssignment = 1; iAssignment < nAssignments[Cluster.maxBases]-1; iAssignment++) {
                         double[] sumAlpha = new double[2];
                         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                             sumAlpha[assign[iAssignment][iHaplo]] += alpha_loc[iTimePoint][iHaplo];
@@ -206,7 +208,7 @@ public class Site {
     
     
     double computeLogLikelihoodAlpha(double[] alpha, int iTimePoint) { // alpha[][] = iTP, iHaplo, iTP
-        if (currentAssignment == 0 || currentAssignment == nAssignments[maxBases]-1 || missing[iTimePoint]) {
+        if (currentAssignment == 0 || currentAssignment == nAssignments[Cluster.maxBases]-1 || missing[iTimePoint]) {
             return 0.0;
         }
         double totalProb = 0.0;
@@ -224,18 +226,18 @@ public class Site {
 
         
     double computeLogLikelihood(double alpha_e, double beta_e, double S, double F0, boolean printHaplo) { // alpha[][] = iHaplo, iTP
-        double[] logLikeAssign = new double[nAssignments[maxBases]];  // log likelihood of the site for each assignment
+        double[] logLikeAssign = new double[nAssignments[Cluster.maxBases]];  // log likelihood of the site for each assignment
         double totalProb = 0.0;
-        assignmentProbs = new double[nAssignments[maxBases]];
+        assignmentProbs = new double[nAssignments[Cluster.maxBases]];
         double[][] likeAssignSNoS = new double[nTimePoints][2];
-        for (int iAssignment = 0; iAssignment < nAssignments[maxBases]; iAssignment++) {
+        for (int iAssignment = 0; iAssignment < nAssignments[Cluster.maxBases]; iAssignment++) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 if (missing[iTimePoint]) {
                     likeAssignSNoS[iTimePoint][0] = 1.0;
                     likeAssignSNoS[iTimePoint][1] = 0.0;
                 }
                 if (!missing[iTimePoint]) {
-                    double[][][] probStrandSNoS = new double[nAssignments[maxBases]][2][2];
+                    double[][][] probStrandSNoS = new double[nAssignments[Cluster.maxBases]][2][2];
                     
                     if (iAssignment == 0) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
@@ -251,7 +253,7 @@ public class Site {
                         likeAssignSNoS[iTimePoint][0] += probStrandSNoS[iAssignment][0][0]*probStrandSNoS[iAssignment][1][0];
                         likeAssignSNoS[iTimePoint][1] += probStrand[iTimePoint][0]*probStrand[iTimePoint][1]
                                 - probStrandSNoS[iAssignment][0][0]*probStrandSNoS[iAssignment][1][0];
-                    } else if (iAssignment == nAssignments[maxBases] - 1) {
+                    } else if (iAssignment == nAssignments[Cluster.maxBases] - 1) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
                             double logProbTerm = logStrandChoose[iTimePoint][iStrand]
                                 + Beta.logBeta(strandData[iTimePoint][iStrand][0]+alpha_e, strandData[iTimePoint][iStrand][1]+beta_e)
@@ -281,10 +283,10 @@ public class Site {
                 }  // end of conditional on timepoint existing
             }   // end of loop over timepoints
  
-            if (iAssignment == 0 || iAssignment == nAssignments[maxBases] - 1) {
+            if (iAssignment == 0 || iAssignment == nAssignments[Cluster.maxBases] - 1) {
                 assignmentProbs[iAssignment] = (1.0 - F0) * 0.5 * Math.exp(logLikeAssign[iAssignment]);
             } else {
-                assignmentProbs[iAssignment] += (F0 / (nAssignments[maxBases] - 2.0)) * Math.exp(logLikeAssign[iAssignment]);
+                assignmentProbs[iAssignment] += (F0 / (nAssignments[Cluster.maxBases] - 2.0)) * Math.exp(logLikeAssign[iAssignment]);
             }
             totalProb += assignmentProbs[iAssignment];
         } // end of loop over assignments
@@ -297,7 +299,7 @@ public class Site {
             System.out.print(iSite);
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                 double[] sumProb = new double[2];
-                for (int iAssignment = 0; iAssignment < nAssignments[maxBases]; iAssignment++) {
+                for (int iAssignment = 0; iAssignment < nAssignments[Cluster.maxBases]; iAssignment++) {
                     sumProb[assign[iAssignment][iHaplo]] += assignmentProbs[iAssignment];
                 }
                 if (sumProb[0] > sumProb[1]) {

@@ -24,10 +24,10 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  * @author rgoldst
  */
 public class Cluster {
-    
+    static int maxBases = 2; // Maximum number of different bases
+    static double minMinAmt = 1.0E-4; // Minimum estimated minimum required for inclusion in data
+            
     int nHaplo = 3; // Number of haplotypes
-    int maxBases = 2; // Maximum number of different bases
-    double minMinAmt = 1.0E-4;  // Minimum estimated minimum required for inclusion in data
     int[] nAssignments = new int[maxBases+1]; // number of possible assignments
     int[][] assign = null; // different possible assignments of bases to haplotypes
     boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***
@@ -70,7 +70,7 @@ public class Cluster {
     
     void run(String[] args) {
         // Initialise stuff
-        DataSet dataSet = new DataSet(args[0], nHaplo, maxBases, nAssignments, assign, addFlat); // Construct dataset
+        DataSet dataSet = new DataSet(args[0], nHaplo, nAssignments, assign, addFlat); // Construct dataset
         alpha = new double[dataSet.getNTimePoints()][nHaplo];
         lb_alpha = new double[nHaplo];
         Arrays.fill(lb_alpha, 1.0E-8);
