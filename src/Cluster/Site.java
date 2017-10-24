@@ -91,23 +91,16 @@ public class Site {
         if (uncertain) {
             return false;
         }
-        makeSums();
-        return ((Cluster.random.nextDouble() < Cluster.useFrac) && nActiveBase > 0);
+//        makeSums();
+        return ((Cluster.random.nextDouble() <= Cluster.useFrac) && nActiveBase > 0);
     }
     
     void identifyActive() {  // identify which bases dominate
-        System.out.println(iSite);
         double[] maxMinAmt = new double[4];    // accumulate minimal sums
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
-                System.out.println("\t" + iTimePoint + "\t" + Arrays.toString(assemblies[iTimePoint].getMinAmt()));
                 for (int iBase = 0; iBase < 4; iBase++) {
                     maxMinAmt[iBase] = Math.max(maxMinAmt[iBase], assemblies[iTimePoint].getMinAmt()[iBase]);
-                    if ((assemblies[iTimePoint].getMinAmt()[iBase] < Cluster.minMinAmt) && (assemblies[iTimePoint].reads[iBase] > 0)) {
-                        System.out.println("jjj\t" + Arrays.toString(assemblies[iTimePoint].getMinAmt()) + "\t" 
-                                + Arrays.toString(assemblies[iTimePoint].strandReads[0]) 
-                                + "\t" + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
-                    }
                 }
                 
             }
@@ -129,22 +122,8 @@ public class Site {
             for (int iBase = 0; iBase < nActiveBase; iBase++) {   // Vector in increasing order
                 activeBase[iBase] = maxMinAmtHash.get(maxMinAmtVector.get(iBase));
             } 
-            
-            if (maxMinAmtVector.size() > Cluster.maxBases) {
-                int iBase = maxMinAmtHash.get(maxMinAmtVector.get(Cluster.maxBases));
-                System.out.println(iBase);
-                System.out.println("Site " + iSite + " Ignoring " + iBase + "\t"  
-                        + baseString[iBase] 
-                        + "\t" + maxMinAmtVector.get(Cluster.maxBases) + "\t" + maxMinAmtHash.get(maxMinAmtVector.get(Cluster.maxBases)));
-                for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                    if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) { 
-                        System.out.println(Arrays.toString(assemblies[iTimePoint].strandReads[0]) + " " + Arrays.toString(assemblies[iTimePoint].strandReads[1]));
-                    }   
-                }
-                System.out.println();
-            }
         }
-        System.out.println("\t" + Arrays.toString(activeBase) + "\n");
+        System.out.println(iSite + "\t" + Arrays.toString(maxMinAmt) + "\t" + Arrays.toString(activeBase));
     }
     
     void makeSums() {

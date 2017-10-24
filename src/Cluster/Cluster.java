@@ -200,7 +200,6 @@ public class Cluster {
                         }
                     }
                     boolean[] basePresent = new boolean[maxBases];      // See if max base == iMax 
-                                                                        // and all lower indiced bases included
                     for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                         basePresent[assign[iHaplo]] = true;
                     }

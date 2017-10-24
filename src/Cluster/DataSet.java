@@ -65,7 +65,7 @@ public class DataSet implements MultivariateFunction{
             try{
                 FileReader file = new FileReader(dataFile);
                 BufferedReader buff = new BufferedReader(file);
-                String line = buff.readLine();
+                String line = "";
                 boolean eof = false;
                 while (!eof) {
                     line = buff.readLine();
@@ -92,9 +92,9 @@ public class DataSet implements MultivariateFunction{
         }
         for (int iSite : allSiteVector) {  // Create activeSiteVector
             Site site = siteHash.get(iSite);
-//            if (site.process()) {    // Decide which bases are most present at that site and do simple sums
-//                activeSiteVector.add(iSite);
-//            } 
+            if (site.process()) {    // Decide which bases are most present at that site and do simple sums
+                activeSiteVector.add(iSite);
+            } 
         }
         System.exit(1);
     }
