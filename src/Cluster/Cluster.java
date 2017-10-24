@@ -24,7 +24,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  * @author rgoldst
  */
 public class Cluster {
-    static int maxBases = 2; // Maximum number of different bases
+    static int maxBases = 4; // Maximum number of different bases
     static double minMinAmt = 1.0E-4; // Minimum estimated minimum required for inclusion in data
             
     int nHaplo = 3; // Number of haplotypes
@@ -205,9 +205,7 @@ public class Cluster {
                         basePresent[assign[iHaplo]] = true;
                     }
                     boolean ok = true;
-                    for (int iBase = 0; iBase <= iMax; iBase++) {
-                        ok = ok && basePresent[iBase];                
-                    }
+                    ok = ok && basePresent[0] && basePresent[iMax];
                     for (int iBase = iMax+1; iBase < maxBases; iBase++) {  // but no higher bases
                         ok = ok && !basePresent[iBase];
                     }
