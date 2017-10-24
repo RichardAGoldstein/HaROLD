@@ -5,12 +5,7 @@
  */
 package Cluster;
 
-import java.util.*;
 import org.apache.commons.math3.distribution.BetaDistribution;
-import org.apache.commons.math3.distribution.BinomialDistribution;
-import org.apache.commons.math3.special.Beta;
-import org.apache.commons.math3.special.Erf;
-import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.*;
 
 /**
@@ -36,7 +31,7 @@ public class Assembly {
         String[] words = inputLine.split(",");
         iSite = Integer.parseInt(words[0]);
 
-        for (int iBase = 0; iBase < 4; iBase++) {
+        for (int iBase = 0; iBase < 4; iBase++) {   // compute various sums of reads
             for (int iStrand = 0; iStrand < 2; iStrand++) {
                 strandReads[iStrand][iBase]=Integer.parseInt(words[(2*iBase)+iStrand+3]);
                 totStrand[iStrand] += strandReads[iStrand][iBase];
@@ -46,11 +41,21 @@ public class Assembly {
         }
         if (totReads == 0) {
             hasData = false;
-
         } else if (Math.max(Math.max(reads[0],reads[1]),Math.max(reads[2],reads[3])) == totReads) {
             conserved = true;
-        } else {
-            double topRatio = 0.00000;
+            int iConsensus = -999;
+            for (int iBase = 0; iBase < 4; iBase++) {
+                if (reads[iBase] == totReads) {
+                    iConsensus = iBase;
+                }
+            }
+            if (iConsensus < 0) {
+                System.out.println("Something wrong in Assembly 1");
+                System.exit(1);
+            }
+            minAmt[iConsensus] = 1.0 + 1.0E-4 * Cluster.random.nextDouble();
+        } else {    // compute relative amounts of 4 different bases
+            double topRatio = 0.0;
             int iConsensus = -999;
             boolean printThis = false;
             for (int iBase = 0; iBase < 4; iBase++) {
@@ -74,7 +79,6 @@ public class Assembly {
                     if (totStrand[1] > 0) {
                         ratio[1] = (1.0 * n[1]) / (1.0 * (n[1] + m[1]));
                     }
-//                    System.out.println(n[0] + "\t" + m[0] + "\t" + n[1] + "\t" + m[1] + "\t" + Arrays.toString(ratio));
                     if (Math.max(ratio[0], ratio[1]) > topRatio) {
                         topRatio = Math.max(ratio[0], ratio[1]);
                         iConsensus = iBase;
@@ -92,14 +96,12 @@ public class Assembly {
                     double correlated = correlatedNum - correlatedDen;
                     double posterior = 0.99 * Math.exp(correlated) / (0.99 * Math.exp(correlated) + 0.01 * Math.exp(independent));
                     minAmt[iBase] = posterior * inverseBeta(0.025, (0.5+reads[iBase]), (0.5+totReads-reads[iBase]));
-                    if (posterior < 0.01) printThis = true;
+                    if (minAmt[iBase] > 1.0E-20) {
+                        minAmt[iBase] += minAmt[iBase] * 1.0E-4 * Cluster.random.nextDouble();
+                    }
                 }
             }
-            minAmt[iConsensus] = 1.0;
-            if (printThis) {
-                System.out.println(Arrays.toString(strandReads[0]) + "\t" + Arrays.toString(strandReads[1])
-                + "\t" + Arrays.toString(minAmt));
-            }
+            minAmt[iConsensus] = topRatio * (1.0 + 1.0E-4 * Cluster.random.nextDouble());
         }
     }
     
@@ -121,6 +123,10 @@ public class Assembly {
     
     int[] getReads() {
         return reads;
+    }
+    
+    int[][] getStrandReads() {
+        return strandReads;
     }
     
     public double inverseBeta(double p, double alpha, double beta){
