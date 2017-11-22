@@ -25,12 +25,14 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  */
 public class Cluster {
     static int maxBases = 4; // Maximum number of different bases
-    static double minMinAmt = 1.0E-4; // Minimum estimated minimum required for inclusion in data
+    static double minMinAmt = 1.0E-10; // Minimum estimated minimum required for inclusion in data
             
     int nHaplo = 3; // Number of haplotypes
     int[] nAssignments = new int[maxBases+1]; // number of possible assignments
     int[][] assign = null; // different possible assignments of bases to haplotypes
     boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***
+    
+    DataSet dataSet = null;
 
     double[] lb_glob = {1.0E-8, 1.0E-8, 1.0E-8};  // lower bound on global params (alpha_e, S, F0)
     double[] ub_glob = {0.1, 0.01, 1.0};  // upper bound on global params
@@ -42,7 +44,7 @@ public class Cluster {
     double S = 0.0001;
     double[][] alpha = null;
     
-    static Random random = new Random();
+    static Random random = new Random(435027);
     static boolean verbose = true; // print lots of intermediate results
     static double useFrac = 1.0;  // what fraction of sites to use (chosen randomly)
     int maxRound = 50;  // maximum number of global iterations
@@ -57,6 +59,7 @@ public class Cluster {
         clus.run(args);
     }
 
+    
     Cluster(String[] args) {
         if (args.length < 2) {
             System.out.println("First argument is file containing list of count files");
@@ -64,13 +67,14 @@ public class Cluster {
             System.exit(1);
         }
         nHaplo = Integer.parseInt(args[1]);  // number of haplotypes
-        constructAssignments();   
+        constructAssignments();  // Construct possible assignments of bases to haplotypes
+        dataSet = new DataSet(args[0], nHaplo, nAssignments, assign, addFlat); // Construct dataset 
     }
     
     
     void run(String[] args) {
         // Initialise stuff
-        DataSet dataSet = new DataSet(args[0], nHaplo, nAssignments, assign, addFlat); // Construct dataset
+        
         alpha = new double[dataSet.getNTimePoints()][nHaplo];
         lb_alpha = new double[nHaplo];
         Arrays.fill(lb_alpha, 1.0E-8);
@@ -81,17 +85,14 @@ public class Cluster {
                 alpha[iTimePoint][iHaplo] = 2.0 * random.nextDouble();
             }
         }
-        
-        
-        
         // Optimise parameters
-        optimiseModel(dataSet);  
+        optimiseModel();  
     }
     
-    void optimiseModel(DataSet dataSet) {
+    void optimiseModel() {
         printColHeaders(0, 0);
         dataSet.setStage(0, alpha_e, beta_e, S, F0, alpha);  // Adjust global parameters and E step
-        double previous = adjustGlobals(dataSet);  // Keep track of improvements
+        double previous = adjustGlobals();  // Keep track of improvements
         double current = previous + 1000.0;
         
         int iRound_0 = 0;  // loop over global optimisations
@@ -106,7 +107,7 @@ public class Cluster {
                 // M step for each timepoint
                 for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
                     dataSet.setITimePoint(iTimePoint);
-                    valueAlpha += adjustAlphas(dataSet, iTimePoint);
+                    valueAlpha += adjustAlphas(iTimePoint);
                 }
                 // E step
                 dataSet.reAdjust(alpha_e, beta_e, S, F0);
@@ -135,7 +136,7 @@ public class Cluster {
             printColHeaders(0, 0);
             dataSet.setStage(0, alpha_e, beta_e, S, F0, alpha); // Adjust global parameters and E step
             previous = current;
-            current = adjustGlobals(dataSet);
+            current = adjustGlobals();
             iRound_0++;
             if (iRound_0 > maxRound || (current - previous)>minDeltaLL) {
                 finished = true;
@@ -144,7 +145,7 @@ public class Cluster {
         dataSet.printHaplotypes(alpha_e, beta_e, S, F0);
     }
 
-    double adjustAlphas(DataSet dataSet, int iTimePoint) {  // Find best parameters for understanding variability
+    double adjustAlphas(int iTimePoint) {  // Find best parameters for understanding variability
         MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,1.0E-6);
         OptimizationData[] parm = new OptimizationData[]{
             new InitialGuess(alpha[iTimePoint]),
@@ -157,7 +158,7 @@ public class Cluster {
     }
     
     
-    double adjustGlobals(DataSet dataSet) {  // Find best parameters for understanding variability
+    double adjustGlobals() {  // Find best parameters for understanding variability
         int nVar = 3;  // set up and initialise parameters
         double[] params = new double[3];
         params[0] = alpha_e;
@@ -184,34 +185,30 @@ public class Cluster {
        
     void constructAssignments() {
         Vector<int[]> assignmentVector = new Vector<>();  // Temporary repository of assignments
-        int nAssigns = pow(maxBases, nHaplo);  // Total number of possible assignments
-        for (int iMax = 0; iMax < maxBases; iMax++) {  // Order list by maximum index of included bases
-            int[] assign = new int[nHaplo];    // Current assignment
-            if (iMax == 0) {
-                int[] copyAssign = Arrays.copyOf(assign, nHaplo);  // Store assignment of everything into zero
-                assignmentVector.add(copyAssign);
-            } else {
-                for (int iAssign = 1; iAssign < nAssigns; iAssign++) {  // Loop over all assignments
-                    assign[0]++;  // Update current assignment
-                    for (int iHaplo = 0; iHaplo < (nHaplo-1); iHaplo++) {
-                        if (assign[iHaplo] >= maxBases) {
-                            assign[iHaplo] = 0;
-                            assign[iHaplo+1]++;
-                        }
+        assignmentVector.add(new int[nHaplo]);  // Store assignment of zero (consensus) into all haplotypes
+        nAssignments[1] = 1;   // how many indices for a given maximum base index e.g. one assignment for assignment of all zeros
+        
+        int nAssigns = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments 
+        for (int iMax = 1; iMax < maxBases; iMax++) {  // Order list by maximum index of included bases
+            int[] nextAssign = new int[nHaplo];    // New assignment
+            for (int iAssign = 1; iAssign < nAssigns; iAssign++) {  // Loop over all possible assignments
+                nextAssign[0]++;  // Update current assignment
+                for (int iHaplo = 0; iHaplo < (nHaplo-1); iHaplo++) {
+                    if (nextAssign[iHaplo] >= maxBases) {
+                        nextAssign[iHaplo] = 0;
+                        nextAssign[iHaplo+1]++;
                     }
-                    boolean[] basePresent = new boolean[maxBases];      // See if max base == iMax 
-                    for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                        basePresent[assign[iHaplo]] = true;
-                    }
-                    boolean ok = true;
-                    ok = ok && basePresent[0] && basePresent[iMax];
-                    for (int iBase = iMax+1; iBase < maxBases; iBase++) {  // but no higher bases
-                        ok = ok && !basePresent[iBase];
-                    }
-                    if (ok) {
-                        int[] copyAssign = Arrays.copyOf(assign, nHaplo);   // if ok copy array to assignmentVector
-                        assignmentVector.add(copyAssign);
-                    }
+                }
+                boolean[] basePresent = new boolean[maxBases];      // See if max base == iMax 
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    basePresent[nextAssign[iHaplo]] = true;
+                }
+                boolean ok = basePresent[0] && basePresent[iMax];   // Assignment contains consensus and max base
+                for (int iBase = iMax+1; iBase < maxBases; iBase++) {  // but no higher bases
+                    ok = ok && !basePresent[iBase];
+                }
+                if (ok) { 
+                    assignmentVector.add(Arrays.copyOf(nextAssign, nHaplo));  // if ok copy array to assignmentVector
                 }
             }
             nAssignments[iMax+1] = assignmentVector.size();   // how many indices for a given maximum base index
@@ -222,8 +219,8 @@ public class Cluster {
             assign[iAssign] = Arrays.copyOf(assignmentVector.get(iAssign), nHaplo);
         }
         
-        System.out.println("zzz\tnAssignments\t" + Arrays.toString(nAssignments));   // Print assignments
         if (verbose) {
+            System.out.println("zzz\tnAssignments\t" + Arrays.toString(nAssignments));   // Print assignments
             System.out.println("zzz\tVarious assignments");
             for (int iAssignment = 0; iAssignment < nAssigns; iAssignment++) {
                 System.out.println("zzz\t" + iAssignment + "\t" + Arrays.toString(assign[iAssignment]));

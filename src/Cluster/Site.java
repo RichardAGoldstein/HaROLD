@@ -15,7 +15,7 @@ import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 
 /**
- * Container for the data at a single site
+ * Container for the reads at a single site
  * 
  * @author rgoldst
  */
@@ -31,21 +31,25 @@ public class Site {
     
     String[] baseString = {"A", "C", "G", "T"};
     
-    Assembly[] assemblies = null; // set of possible data points
-    int[][][] strandData = null; // [tp][strand][base] top two sets of reads on each strand
-    int[][] strandCount = null; // [tp][strand] number of reads on each strand
-    int[][] data = null; // [tp][base]
-    int[] totData = null; // [tp]
-    int sumTotData = 0; // sum of totData over all tp
+    Assembly[] assemblies = null; // set of possible reads points
+    
+    
+    int[][][] strandReads = null; // [tp][strand][base] top two sets of reads on each strand
+    int[][] totStrand = null; // [tp][strand] number of reads on each strand
+    int[][] reads = null; // [tp][base]
+    int[] totReads = null; // [tp]
+    int sumTotData = 0; // sum of totReads over all tp
+    
     double[][] probStrand = null;
     double[][] logLikeAssignPoly = null;
     double[][] logStrandChoose = null; // N_s choose n_s for each [tp][strand]
     double[] logTotChoose = null;  // N choose n for each [tp];
+    
+    
     int[] activeBase = {-999, -999};  // active bases at that site
     int nActiveBase = 0;   // number of active bases
   
     boolean variable = false;
-    boolean uncertain = false;
     boolean active = true;
     boolean[] missing = null;   // time point is missing
     
@@ -63,19 +67,20 @@ public class Site {
         this.nHaplo = nHaplo;
         this.nAssignments = nAssignments;
         this.assign = assign;
-        assemblies = new Assembly[nTimePoints]; 
-        strandData = new int[nTimePoints][2][2];  
-        data = new int[nTimePoints][2]; 
-        totData = new int[nTimePoints];  
-        strandCount = new int[nTimePoints][2];
+        assemblies = new Assembly[nTimePoints];
+        missing = new boolean[nTimePoints]; 
+        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+            missing[iTimePoint] = true; // initially assume reads point doesn't exist
+        }
+        
+
+        
         logStrandChoose = new double[nTimePoints][2]; 
         logTotChoose = new double[nTimePoints];
-        missing = new boolean[nTimePoints];
+
         logLikeAssignPoly = new double[nTimePoints][nAssignments[Cluster.maxBases]];
         probStrand = new double[nTimePoints][2];
-        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            missing[iTimePoint] = true; // initially assume data point doesn't exist
-        }
+
     }
   
     void addAssembly(int iTimePoint, Assembly assembly) {  
@@ -88,11 +93,9 @@ public class Site {
         if (!active) {
             return false;
         }
-        if (uncertain) {
-            return false;
-        }
-//        makeSums();
-        return ((Cluster.random.nextDouble() <= Cluster.useFrac) && nActiveBase > 0);
+        if (((Cluster.random.nextDouble() > Cluster.useFrac))) return false;
+        makeSums();
+        return true;
     }
     
     void identifyActive() {  // identify which bases dominate
@@ -101,8 +104,7 @@ public class Site {
             if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
                 for (int iBase = 0; iBase < 4; iBase++) {
                     maxMinAmt[iBase] = Math.max(maxMinAmt[iBase], assemblies[iTimePoint].getMinAmt()[iBase]);
-                }
-                
+                }    
             }
         }
         Vector<Double> maxMinAmtVector = new Vector<>();
@@ -122,40 +124,47 @@ public class Site {
             for (int iBase = 0; iBase < nActiveBase; iBase++) {   // Vector in increasing order
                 activeBase[iBase] = maxMinAmtHash.get(maxMinAmtVector.get(iBase));
             } 
+            variable = (nActiveBase > 1);
         }
-        System.out.println(iSite + "\t" + Arrays.toString(maxMinAmt) + "\t" + Arrays.toString(activeBase));
+        if (Cluster.verbose) {
+            System.out.print(iSite + "\t");
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
+                    System.out.print(Arrays.toString(assemblies[iTimePoint].getStrandReads()[0])
+                    + Arrays.toString(assemblies[iTimePoint].getStrandReads()[1]));
+                }
+            }
+            System.out.println(Arrays.toString(maxMinAmt) + "\t" + Arrays.toString(activeBase) + "\t" + nActiveBase);
+        }
     }
     
     void makeSums() {
+        strandReads = new int[nTimePoints][2][nActiveBase];  
+        reads = new int[nTimePoints][nActiveBase]; 
+        totReads = new int[nTimePoints];  
+        totStrand = new int[nTimePoints][2];
         for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
             if (!missing[iTimePoint] && assemblies[iTimePoint].hasData()) {
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
                     for (int iActive = 0; iActive < nActiveBase; iActive++) {
                         if (activeBase[iActive] >= 0) {
-                            strandData[iTimePoint][iStrand][iActive] = 
+                            strandReads[iTimePoint][iStrand][iActive] = 
                                 assemblies[iTimePoint].strandReads[iStrand][activeBase[iActive]];
-                            data[iTimePoint][iActive] += strandData[iTimePoint][iStrand][iActive];
-                            totData[iTimePoint] += strandData[iTimePoint][iStrand][iActive];
-                            sumTotData += strandData[iTimePoint][iStrand][iActive];
+                            reads[iTimePoint][iActive] += strandReads[iTimePoint][iStrand][iActive];
+                            totReads[iTimePoint] += strandReads[iTimePoint][iStrand][iActive];
+                            sumTotData += strandReads[iTimePoint][iStrand][iActive];
                         }
                     }
                 }
-                for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    logStrandChoose[iTimePoint][iStrand] = 
-                            CombinatoricsUtils.factorialLog(strandData[iTimePoint][iStrand][0]+strandData[iTimePoint][iStrand][1])
-                            - CombinatoricsUtils.factorialLog(strandData[iTimePoint][iStrand][0])
-                            - CombinatoricsUtils.factorialLog(strandData[iTimePoint][iStrand][1]);
-                }
-                logTotChoose[iTimePoint] = CombinatoricsUtils.factorialLog(totData[iTimePoint])
-                            - CombinatoricsUtils.factorialLog(data[iTimePoint][0])
-                            - CombinatoricsUtils.factorialLog(data[iTimePoint][1]);
-                if (data[iTimePoint][0] > 0) {
-                    nActiveBase = Math.max(nActiveBase, 1);
-                }
-                if (data[iTimePoint][1] > 0) {
-                    nActiveBase = Math.max(nActiveBase, 2);
-                }
-
+//                for (int iStrand = 0; iStrand < 2; iStrand++) {
+//                    logStrandChoose[iTimePoint][iStrand] = 
+//                            CombinatoricsUtils.factorialLog(strandReads[iTimePoint][iStrand][0]+strandReads[iTimePoint][iStrand][1])
+//                            - CombinatoricsUtils.factorialLog(strandReads[iTimePoint][iStrand][0])
+//                            - CombinatoricsUtils.factorialLog(strandReads[iTimePoint][iStrand][1]);
+//                }
+//                logTotChoose[iTimePoint] = CombinatoricsUtils.factorialLog(totReads[iTimePoint])
+//                            - CombinatoricsUtils.factorialLog(reads[iTimePoint][0])
+//                            - CombinatoricsUtils.factorialLog(reads[iTimePoint][1]);
             }
         }
     }
@@ -177,7 +186,7 @@ public class Site {
                         }
                         logLikeAssignPoly[iTimePoint][iAssignment] = 
                             logStrandChoose[iTimePoint][0] + logStrandChoose[iTimePoint][1]
-                            + Beta.logBeta(data[iTimePoint][1]+sumAlpha[0], data[iTimePoint][0]+sumAlpha[1])
+                            + Beta.logBeta(reads[iTimePoint][1]+sumAlpha[0], reads[iTimePoint][0]+sumAlpha[1])
                             - Beta.logBeta(sumAlpha[0], sumAlpha[1]);
                     }
                 }
@@ -198,7 +207,7 @@ public class Site {
         }
         logProb = Math.log(probStrand[iTimePoint][0]) + Math.log(probStrand[iTimePoint][1])
             + logStrandChoose[iTimePoint][0] + logStrandChoose[iTimePoint][1]
-            + Beta.logBeta(data[iTimePoint][1]+sumAlpha[0], data[iTimePoint][0]+sumAlpha[1])
+            + Beta.logBeta(reads[iTimePoint][1]+sumAlpha[0], reads[iTimePoint][0]+sumAlpha[1])
             - Beta.logBeta(sumAlpha[0], sumAlpha[1]);
         return logProb;
     }
@@ -221,10 +230,10 @@ public class Site {
                     if (iAssignment == 0) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
                             double logProbTerm = logStrandChoose[iTimePoint][iStrand]
-                            + Beta.logBeta(strandData[iTimePoint][iStrand][1]+alpha_e, strandData[iTimePoint][iStrand][0]+beta_e)
+                            + Beta.logBeta(strandReads[iTimePoint][iStrand][1]+alpha_e, strandReads[iTimePoint][iStrand][0]+beta_e)
                             - Beta.logBeta(alpha_e, beta_e);
                             probStrandSNoS[iAssignment][iStrand][0] = (1.0-S)*Math.exp(logProbTerm);
-                            probStrandSNoS[iAssignment][iStrand][1] = S/(strandData[iTimePoint][iStrand][0]+strandData[iTimePoint][iStrand][1]+1.0);
+                            probStrandSNoS[iAssignment][iStrand][1] = S/(strandReads[iTimePoint][iStrand][0]+strandReads[iTimePoint][iStrand][1]+1.0);
                             probStrand[iTimePoint][iStrand] = probStrandSNoS[iAssignment][iStrand][0] 
                                     + probStrandSNoS[iAssignment][iStrand][1];
                         }
@@ -235,10 +244,10 @@ public class Site {
                     } else if (iAssignment == nAssignments[Cluster.maxBases] - 1) {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
                             double logProbTerm = logStrandChoose[iTimePoint][iStrand]
-                                + Beta.logBeta(strandData[iTimePoint][iStrand][0]+alpha_e, strandData[iTimePoint][iStrand][1]+beta_e)
+                                + Beta.logBeta(strandReads[iTimePoint][iStrand][0]+alpha_e, strandReads[iTimePoint][iStrand][1]+beta_e)
                                 - Beta.logBeta(alpha_e, beta_e);
                             probStrandSNoS[iAssignment][iStrand][0] = (1.0 - S) * Math.exp(logProbTerm);
-                            probStrandSNoS[iAssignment][iStrand][1] = S/(strandData[iTimePoint][iStrand][0] + strandData[iTimePoint][iStrand][1]+1.0);
+                            probStrandSNoS[iAssignment][iStrand][1] = S/(strandReads[iTimePoint][iStrand][0] + strandReads[iTimePoint][iStrand][1]+1.0);
                             probStrand[iTimePoint][iStrand] = probStrandSNoS[iAssignment][iStrand][0] 
                                     + probStrandSNoS[iAssignment][iStrand][1];
                         }
@@ -250,10 +259,10 @@ public class Site {
                     } else {
                         for (int iStrand = 0; iStrand < 2; iStrand++) {
                             double logProbTerm = 
-                                Beta.logBeta(alpha_e, strandData[iTimePoint][iStrand][0]+strandData[iTimePoint][iStrand][1] + beta_e) 
+                                Beta.logBeta(alpha_e, strandReads[iTimePoint][iStrand][0]+strandReads[iTimePoint][iStrand][1] + beta_e) 
                                     - Beta.logBeta(alpha_e, beta_e);
                              probStrand[iTimePoint][iStrand] = (1.0-S)*Math.exp(logProbTerm)
-                                     + S/(strandData[iTimePoint][iStrand][0]+strandData[iTimePoint][iStrand][1]+1.0);
+                                     + S/(strandReads[iTimePoint][iStrand][0]+strandReads[iTimePoint][iStrand][1]+1.0);
                         }
                         logLikeAssign[iAssignment] += Math.log(probStrand[iTimePoint][0]) + Math.log(probStrand[iTimePoint][1])
                                 + logLikeAssignPoly[iTimePoint][iAssignment];
@@ -293,7 +302,7 @@ public class Site {
                 } else {
                     System.out.print(" ");
                 }
-                System.out.print(Arrays.toString(data[iTimePoint]));
+                System.out.print(Arrays.toString(reads[iTimePoint]));
             }
             System.out.println();
         }

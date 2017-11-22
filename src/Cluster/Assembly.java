@@ -5,6 +5,7 @@
  */
 package Cluster;
 
+import java.util.Arrays;
 import org.apache.commons.math3.distribution.BetaDistribution;
 import org.apache.commons.math3.util.*;
 
@@ -21,7 +22,7 @@ public class Assembly {
     int[] reads = new int[4];  // sum for each base
     int totReads = 0;
     int[] totStrand = new int[2];
-    double[] minAmt = new double[4];
+    double[] minAmt = new double[4];   // minimum frequency of base
     
     boolean hasData = true;
     boolean conserved = false;
@@ -39,9 +40,9 @@ public class Assembly {
                 totReads += strandReads[iStrand][iBase];
             }
         }
-        if (totReads == 0) {
+        if (totReads == 0) {   // no data
             hasData = false;
-        } else if (Math.max(Math.max(reads[0],reads[1]),Math.max(reads[2],reads[3])) == totReads) {
+        } else if (Math.max(Math.max(reads[0],reads[1]),Math.max(reads[2],reads[3])) == totReads) {  // conserved site
             conserved = true;
             int iConsensus = -999;
             for (int iBase = 0; iBase < 4; iBase++) {
@@ -57,7 +58,7 @@ public class Assembly {
         } else {    // compute relative amounts of 4 different bases
             double topRatio = 0.0;
             int iConsensus = -999;
-            boolean printThis = false;
+            double[] posterior = new double[4];
             for (int iBase = 0; iBase < 4; iBase++) {
                 if (reads[iBase] > 0) {
                     int[] n = new int[2];
@@ -65,21 +66,17 @@ public class Assembly {
                     double[] ratio = new double[2];
                     n[0] = strandReads[0][iBase];
                     n[1] = strandReads[1][iBase];
-                    for (int jBase = 0; jBase < 4; jBase++) {
-                        if (iBase != jBase) {
-                            m[0] += strandReads[0][jBase];
-                            m[1] += strandReads[1][jBase];
-                        }
-                    }
+                    m[0] = totStrand[0] - n[0];
+                    m[1] = totStrand[1] - n[1];
                     ratio[0] = 0.0;
                     ratio[1] = 0.0;
                     if (totStrand[0] > 0) {
-                        ratio[0] = (1.0 * n[0]) / (1.0 * (n[0] + m[0]));
+                        ratio[0] = (1.0 * n[0]) / (1.0 * (n[0] + m[0]));   // ratio on two strands
                     }
                     if (totStrand[1] > 0) {
                         ratio[1] = (1.0 * n[1]) / (1.0 * (n[1] + m[1]));
                     }
-                    if (Math.max(ratio[0], ratio[1]) > topRatio) {
+                    if (Math.max(ratio[0], ratio[1]) > topRatio) {   // Assuming base with maximum frequency on strand is consensus 
                         topRatio = Math.max(ratio[0], ratio[1]);
                         iConsensus = iBase;
                     }
@@ -94,14 +91,16 @@ public class Assembly {
                             + CombinatoricsUtils.factorialLog(m[1])
                             + CombinatoricsUtils.factorialLog(n[0] + n[1] + m[0] + m[1] + 1);
                     double correlated = correlatedNum - correlatedDen;
-                    double posterior = 0.99 * Math.exp(correlated) / (0.99 * Math.exp(correlated) + 0.01 * Math.exp(independent));
-                    minAmt[iBase] = posterior * inverseBeta(0.025, (0.5+reads[iBase]), (0.5+totReads-reads[iBase]));
-                    if (minAmt[iBase] > 1.0E-20) {
-                        minAmt[iBase] += minAmt[iBase] * 1.0E-4 * Cluster.random.nextDouble();
-                    }
+                    posterior[iBase] = 0.99 * Math.exp(correlated) / (0.99 * Math.exp(correlated) + 0.01 * Math.exp(independent));
                 }
             }
-            minAmt[iConsensus] = topRatio * (1.0 + 1.0E-4 * Cluster.random.nextDouble());
+            posterior[iConsensus] = 1.0;
+            for (int iBase = 0; iBase < 4; iBase++) {
+                if (reads[iBase] > 0) {
+                    minAmt[iBase] = posterior[iBase] * inverseBeta(0.025, (0.5+reads[iBase]), (0.5+totReads-reads[iBase]));
+                    minAmt[iBase] *= (1.0 + 1.0E-4 * Cluster.random.nextDouble());   // Add a small amount so no numbers are exactly equal
+                }
+            }
         }
     }
     
