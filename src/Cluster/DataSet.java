@@ -22,7 +22,6 @@ public class DataSet implements MultivariateFunction{
     Vector<Integer> activeSiteVector = new Vector<Integer>();  // List of sites that are actively considered
     Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites  
     int nHaplo = 3; // Number of haplotypes
-    int[] nAssignments = null; // number of possible assignments
     int[][] assign = null; // different possible assignments
     boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
     int nTimePoints = 0;   // Number of time points
@@ -31,9 +30,8 @@ public class DataSet implements MultivariateFunction{
     int iStage = 0;
     int iTimePoint = 0;
 
-    DataSet(String fileNameFile, int nHaplo, int[] nAssignments, int[][] assign, boolean addFlat) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, int[][] assign, boolean addFlat) {  // Read in data
         this.nHaplo = nHaplo;
-        this.nAssignments = nAssignments;
         this.assign = assign;
         this.addFlat = addFlat;
         if (addFlat)  {
@@ -72,16 +70,13 @@ public class DataSet implements MultivariateFunction{
                     if (line == null) {
                             eof = true;
                     } else {
-                        Assembly assembly = new Assembly(line);  // create data point for each line in input file
-                        if (assembly.hasData()) {
-                            int iSite = assembly.getISite();    // assign to a given site
-                            if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
-                                allSiteVector.add(iSite);
-                                Site newSite = new Site(iSite, nTimePoints, nHaplo, nAssignments, assign); // create new site if needed
-                                siteHash.put(iSite, newSite);
-                            }
-                            siteHash.get(iSite).addAssembly(iTimePoint, assembly);  // add datapoint to site
+                        int iSite = Integer.parseInt(line.split(",")[0]);
+                        if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
+                            allSiteVector.add(iSite);
+                            Site newSite = new Site(iSite, nTimePoints, nHaplo, assign); // create new site if needed
+                            siteHash.put(iSite, newSite);
                         }
+                        siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site
                     }
                 }
             }
@@ -90,9 +85,10 @@ public class DataSet implements MultivariateFunction{
                 System.exit(1);
             }
         }
+        
         for (int iSite : allSiteVector) {  // Create activeSiteVector
             Site site = siteHash.get(iSite);
-            if (site.process()) {    // Decide which bases are most present at that site and do simple sums
+            if (site.isActive()) {    // do simple sums
                 activeSiteVector.add(iSite);
             } 
         }

@@ -28,7 +28,6 @@ public class Cluster {
     static double minMinAmt = 1.0E-10; // Minimum estimated minimum required for inclusion in data
             
     int nHaplo = 3; // Number of haplotypes
-    int[] nAssignments = new int[maxBases+1]; // number of possible assignments
     int[][] assign = null; // different possible assignments of bases to haplotypes
     boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***
     
@@ -43,6 +42,8 @@ public class Cluster {
     double F0 = 0.02;
     double S = 0.0001;
     double[][] alpha = null;
+    
+    static int iFocus = 234990;
     
     static Random random = new Random(435027);
     static boolean verbose = true; // print lots of intermediate results
@@ -68,7 +69,7 @@ public class Cluster {
         }
         nHaplo = Integer.parseInt(args[1]);  // number of haplotypes
         constructAssignments();  // Construct possible assignments of bases to haplotypes
-        dataSet = new DataSet(args[0], nHaplo, nAssignments, assign, addFlat); // Construct dataset 
+        dataSet = new DataSet(args[0], nHaplo, assign, addFlat); // Construct dataset 
     }
     
     
@@ -184,45 +185,17 @@ public class Cluster {
     }
        
     void constructAssignments() {
-        Vector<int[]> assignmentVector = new Vector<>();  // Temporary repository of assignments
-        assignmentVector.add(new int[nHaplo]);  // Store assignment of zero (consensus) into all haplotypes
-        nAssignments[1] = 1;   // how many indices for a given maximum base index e.g. one assignment for assignment of all zeros
-        
-        int nAssigns = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments 
-        for (int iMax = 1; iMax < maxBases; iMax++) {  // Order list by maximum index of included bases
-            int[] nextAssign = new int[nHaplo];    // New assignment
-            for (int iAssign = 1; iAssign < nAssigns; iAssign++) {  // Loop over all possible assignments
-                nextAssign[0]++;  // Update current assignment
-                for (int iHaplo = 0; iHaplo < (nHaplo-1); iHaplo++) {
-                    if (nextAssign[iHaplo] >= maxBases) {
-                        nextAssign[iHaplo] = 0;
-                        nextAssign[iHaplo+1]++;
-                    }
-                }
-                boolean[] basePresent = new boolean[maxBases];      // See if max base == iMax 
-                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                    basePresent[nextAssign[iHaplo]] = true;
-                }
-                boolean ok = basePresent[0] && basePresent[iMax];   // Assignment contains consensus and max base
-                for (int iBase = iMax+1; iBase < maxBases; iBase++) {  // but no higher bases
-                    ok = ok && !basePresent[iBase];
-                }
-                if (ok) { 
-                    assignmentVector.add(Arrays.copyOf(nextAssign, nHaplo));  // if ok copy array to assignmentVector
-                }
-            }
-            nAssignments[iMax+1] = assignmentVector.size();   // how many indices for a given maximum base index
+        // Construct all possible ways of assigning positions in haplotypes to specific bases
+        int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
+        assign = new int[nAssignments][nHaplo];   // record of base found in iHaplo in assignment iAssign 
+        for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {    // Loop over possible haplotypes
+                assign[iAssign][iHaplo] = (iAssign / pow(maxBases, iHaplo)) % (maxBases);
+            }       
         }
-        nAssigns = assignmentVector.size();   // Transfer assignments to (presumably faster) array
-        assign = new int[nAssigns][nHaplo];
-        for (int iAssign = 0; iAssign < nAssigns; iAssign++) {
-            assign[iAssign] = Arrays.copyOf(assignmentVector.get(iAssign), nHaplo);
-        }
-        
         if (verbose) {
-            System.out.println("zzz\tnAssignments\t" + Arrays.toString(nAssignments));   // Print assignments
             System.out.println("zzz\tVarious assignments");
-            for (int iAssignment = 0; iAssignment < nAssigns; iAssignment++) {
+            for (int iAssignment = 0; iAssignment < nAssignments; iAssignment++) {
                 System.out.println("zzz\t" + iAssignment + "\t" + Arrays.toString(assign[iAssignment]));
             }
             System.out.println("zzz");
