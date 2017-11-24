@@ -81,9 +81,6 @@ public class Site {
     }
   
     void addTimePoint(int iTimePoint, String line) { 
-        if (iSite == Cluster.iFocus) {
-            System.out.println(line);
-        }
         String[] words = line.split(",");
         for (int iBase = 0; iBase < 4; iBase++) {   // compute various sums of reads
             for (int iStrand = 0; iStrand < 2; iStrand++) {
@@ -110,6 +107,32 @@ public class Site {
         }
     }
     
+    double computeLogFitness(int iTimePoint, double[] alpha_nuc, double alpha_C, double alpha_E) {
+        double logFitness = 0.0;
+        double bAlpha_E = 0.0;
+        double alphaSum = 0.0;
+        double[] N_Cs = new double[2];
+        for (int iBase = 0; iBase < 4; iBase++) {
+            if (alpha_nuc[iBase] < 1.0E-10) {
+                bAlpha_E += alpha_E;
+                logFitness += Gamma.logGamma(strandReads[iTimePoint][0][iBase] + alpha_E)
+                        + Gamma.logGamma(strandReads[iTimePoint][1][iBase] + alpha_E); 
+            } else {
+                alphaSum += alpha_nuc[iBase];
+                N_Cs[0] += strandReads[iTimePoint][0][iBase];
+                N_Cs[1] += strandReads[iTimePoint][1][iBase];
+                logFitness += Gamma.logGamma(reads[iTimePoint][iBase] + alpha_nuc[iBase]);
+            }
+        }
+        double N_C = N_Cs[0] + N_Cs[1];
+        logFitness += Gamma.logGamma(N_Cs[0] + alpha_C) + Gamma.logGamma(N_Cs[1] + alpha_C) - 
+                (Gamma.logGamma(N_C + alphaSum) + Gamma.logGamma(totStrand[iTimePoint][0] + alpha_C + bAlpha_E) 
+                    + Gamma.logGamma(totStrand[iTimePoint][1] + alpha_C + bAlpha_E));
+        return logFitness;
+    }
+    
+    
+    
     boolean isActive() {
         siteActive = false;
         for (int iBase = 0; iBase < 4; iBase++) {
@@ -117,21 +140,6 @@ public class Site {
                 nPresentBase++;
                 siteActive = true;
             }
-        }
-        siteConserved = (nPresentBase == 1);
-        if (iSite == Cluster.iFocus) {
-            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                System.out.println("TimePoint " + iTimePoint);
-                for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    System.out.println("\t" + Arrays.toString(strandReads[iTimePoint][iStrand]));
-                }
-                System.out.println("\t" + Arrays.toString(totStrand[iTimePoint]));
-                System.out.println("\t" + Arrays.toString(reads[iTimePoint]));
-                System.out.println("\t" + totReads[iTimePoint]);
-            }
-            System.out.println("PresentBase\t" + Arrays.toString(presentBase) + "\nnPresentBase\t" + nPresentBase 
-                    + "\ntimePointHasData\t" + Arrays.toString(timePointHasData)
-                    + "\ntimePointConserved\t" + Arrays.toString(timePointConserved) + "\nsiteConserved\t" + siteConserved);
         }
         return siteActive;
     }

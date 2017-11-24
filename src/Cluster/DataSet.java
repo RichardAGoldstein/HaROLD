@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Vector;
 import org.apache.commons.math3.analysis.MultivariateFunction;
+import org.apache.commons.math3.special.Gamma;
 
 /**
  *
@@ -92,8 +93,26 @@ public class DataSet implements MultivariateFunction{
                 activeSiteVector.add(iSite);
             } 
         }
-        System.exit(1);
+        System.out.println(allSiteVector.size() + "\t" + activeSiteVector.size());
     }
+    
+    void calculateFitness(int iTimePoint, double[] alpha_nuc, double alpha_C, double alpha_E) {
+        double logPreterm = 0.0;
+        double bAlpha_E = 0.0;
+        double alphaSum = 0.0;
+        for (int iBase = 0; iBase < 4; iBase++) {
+            if (alpha_nuc[iBase] < 1.0E-10) {
+                bAlpha_E += alpha_E;
+                logPreterm -= 2.0 * Gamma.logGamma(alpha_E);
+            } else {
+                alphaSum += alpha_nuc[iBase];
+                logPreterm -= Gamma.logGamma(alpha_nuc[iBase]);
+            }
+        }
+        logPreterm += Gamma.logGamma(alphaSum) + 2.0 * Gamma.logGamma(alpha_C + bAlpha_E)
+                - 2.0 * Gamma.logGamma(alpha_C);
+    }
+    
     
     int getNTimePoints() {
         return nTimePoints;

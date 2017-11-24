@@ -43,8 +43,6 @@ public class Cluster {
     double S = 0.0001;
     double[][] alpha = null;
     
-    static int iFocus = 234990;
-    
     static Random random = new Random(435027);
     static boolean verbose = true; // print lots of intermediate results
     static double useFrac = 1.0;  // what fraction of sites to use (chosen randomly)
@@ -57,7 +55,7 @@ public class Cluster {
      */
     public static void main(String[] args) {
         Cluster clus = new Cluster(args);
-        clus.run(args);
+//        clus.run(args);
     }
 
     
