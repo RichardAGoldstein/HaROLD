@@ -8,10 +8,10 @@ package Cluster;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Vector;
 import org.apache.commons.math3.analysis.MultivariateFunction;
-import org.apache.commons.math3.special.Gamma;
 
 /**
  *
@@ -23,17 +23,26 @@ public class DataSet implements MultivariateFunction{
     Vector<Integer> activeSiteVector = new Vector<Integer>();  // List of sites that are actively considered
     Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites  
     int nHaplo = 3; // Number of haplotypes
-    int[][] assign = null; // different possible assignments
+    Vector<Assignment> assignmentVector = null;
     boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
     int nTimePoints = 0;   // Number of time points
     
     int iter = 0;  // Initialise count of iterations   
     int iStage = 0;
     int iTimePoint = 0;
+    
+    int optType = 0;
+    int optTimePoint = 0;
+    
+    double[][] currentAlphaHap = null;
+    double currentAlpha_C = 1.0;
+    double currentAlpha_E = 0.01;
+    
+    int iCount = 0;
 
-    DataSet(String fileNameFile, int nHaplo, int[][] assign, boolean addFlat) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, boolean addFlat) {  // Read in data
         this.nHaplo = nHaplo;
-        this.assign = assign;
+        this.assignmentVector = assignmentVector;
         this.addFlat = addFlat;
         if (addFlat)  {
             System.out.println("addFlat not yet implemented");
@@ -74,7 +83,7 @@ public class DataSet implements MultivariateFunction{
                         int iSite = Integer.parseInt(line.split(",")[0]);
                         if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
-                            Site newSite = new Site(iSite, nTimePoints, nHaplo, assign); // create new site if needed
+                            Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
                             siteHash.put(iSite, newSite);
                         }
                         siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site
@@ -93,97 +102,133 @@ public class DataSet implements MultivariateFunction{
                 activeSiteVector.add(iSite);
             } 
         }
-        System.out.println(allSiteVector.size() + "\t" + activeSiteVector.size());
-    }
-    
-    void calculateFitness(int iTimePoint, double[] alpha_nuc, double alpha_C, double alpha_E) {
-        double logPreterm = 0.0;
-        double bAlpha_E = 0.0;
-        double alphaSum = 0.0;
-        for (int iBase = 0; iBase < 4; iBase++) {
-            if (alpha_nuc[iBase] < 1.0E-10) {
-                bAlpha_E += alpha_E;
-                logPreterm -= 2.0 * Gamma.logGamma(alpha_E);
-            } else {
-                alphaSum += alpha_nuc[iBase];
-                logPreterm -= Gamma.logGamma(alpha_nuc[iBase]);
+        currentAlphaHap = new double[nTimePoints][nHaplo];
+        for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                currentAlphaHap[iTimePoint][iHaplo] = iHaplo + 1.0;
             }
         }
-        logPreterm += Gamma.logGamma(alphaSum) + 2.0 * Gamma.logGamma(alpha_C + bAlpha_E)
-                - 2.0 * Gamma.logGamma(alpha_C);
+        currentAlpha_C = 1.0;
+        currentAlpha_E = 0.001;
     }
+    
+    double computeTotalLogLikelihood(double[][] alphaHap, double alpha_C, double alpha_E) {
+        for (Assignment assignment : assignmentVector) {
+            assignment.setAlphas(alphaHap, alpha_C, alpha_E);
+        }
+        double totalLogLikelihood = 0.0;
+        for (int iSite : activeSiteVector) {
+            Site site = siteHash.get(iSite);
+            totalLogLikelihood += site.computeSiteLogLikelihood();
+        }
+        return totalLogLikelihood;
+    }
+    
+    void setOptType(int optType, int optTimePoint) {
+        this.optType = optType;
+        this.optTimePoint = optTimePoint;
+        System.out.println(optType + "\t" + optTimePoint);
+        iCount = 0;
+    }
+    
+    
     
     
     int getNTimePoints() {
         return nTimePoints;
     }
-    
-    void setStage(int iStage, double alpha_e, double beta_e, double S, double F0, double[][] alpha) {
-        iter = 0;
-        this.iStage = iStage;
-        for (int iSite : activeSiteVector) {
-            siteHash.get(iSite).setParams(iStage, alpha_e, beta_e, S, F0, alpha);   
-        }
-    }
-    
-    void setITimePoint(int iTimePoint) {
-        this.iTimePoint = iTimePoint;
-    }
-    
+//    
+//    void setStage(int iStage, double alpha_e, double beta_e, double S, double F0, double[][] alpha) {
+//        iter = 0;
+//        this.iStage = iStage;
+//        for (int iSite : activeSiteVector) {
+//            siteHash.get(iSite).setParams(iStage, alpha_e, beta_e, S, F0, alpha);   
+//        }
+//    }
+//    
+//    void setITimePoint(int iTimePoint) {
+//        this.iTimePoint = iTimePoint;
+//    }
+//    
     public double value(double[] params) {
-        if (iStage == 0) {
-            return (globalValue(params));
-        } if (iStage == 1) {
-            return alphaValue(params);
-        }  
+        
+        if (optType == 0) {
+            double val = computeTotalLogLikelihood(currentAlphaHap, params[0], params[1]);
+            if (iCount % 100 == 0) {
+                System.out.print("xxx\t" + Arrays.toString(params));
+                System.out.println("\t" + val);
+            }
+            iCount++;
+            return -val;
+        } else if (optType == 1) {
+            double[][] newAlphaHap = new double[nTimePoints][nHaplo];
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    if (iTimePoint != optTimePoint){
+                        newAlphaHap[iTimePoint][iHaplo] = currentAlphaHap[iTimePoint][iHaplo];
+                    } else {
+                        newAlphaHap[iTimePoint][iHaplo] = params[iHaplo];
+                    }
+                }
+            }
+            double val = computeTotalLogLikelihood(newAlphaHap, currentAlpha_C, currentAlpha_E);
+            if (iCount % 100 == 0) {
+                System.out.print("xxx\t" + Arrays.toString(params));
+                System.out.println("\t" + val);
+            }
+            iCount++;
+            return -val;
+        }
+        System.out.println("Error in optimisation");
+        System.exit(1);
         return 0.0;
     }
     
-    void printHaplotypes(double alpha_e, double beta_e, double S, double F0) {
-        System.out.println("zzz\nzzz\nzzz");
-        for (int iSite : activeSiteVector) {
-            Site site = siteHash.get(iSite);
-            site.computeLogLikelihood(alpha_e, beta_e, S, F0, true);   
-        }
-    }
-    
-    
-    void reAdjust(double alpha_e, double beta_e, double S, double F0) {
-        for (int iSite : activeSiteVector) {
-            Site site = siteHash.get(iSite);
-            site.computeLogLikelihood(alpha_e, beta_e, S, F0, false);   
-        }
-    }
-    
-    public double alphaValue(double[] params) {
-        double value = 0.0;
-        for (int iSite : activeSiteVector) {
-            Site site = siteHash.get(iSite);
-            value += site.computeLogLikelihoodAlpha(params, iTimePoint);   
-        }
-        return -value;
-    }
-
-    
-    public double globalValue(double[] params) {
-        double value = 0.0;
-        // Distribute parameters as appropriately
-        double alpha_e = params[0];
-        double S = params[1];
-        double F0 = params[2];
-        double beta_e = 10.0;
-        for (int iSite : activeSiteVector) {
-            Site site = siteHash.get(iSite);
-            value += site.computeLogLikelihood(alpha_e, beta_e, S, F0, false);   
-        }
-        if (iter%10 == 0) {  // Print stuff
-            System.out.format("zzz\t%d\t%10.4f\t%12.6f  %12.6f\t%10.8f\t%10.8f      ",
-                    iter, value, alpha_e, beta_e, S, F0);
-            System.out.println();
-        }
-        iter++;
-        return -value;
-    }
+//    void printHaplotypes(double alpha_e, double beta_e, double S, double F0) {
+//        System.out.println("zzz\nzzz\nzzz");
+//        for (int iSite : activeSiteVector) {
+//            Site site = siteHash.get(iSite);
+//            site.computeLogLikelihood(alpha_e, beta_e, S, F0, true);   
+//        }
+//    }
+//    
+//    
+//    void reAdjust(double alpha_e, double beta_e, double S, double F0) {
+//        for (int iSite : activeSiteVector) {
+//            Site site = siteHash.get(iSite);
+//            site.computeLogLikelihood(alpha_e, beta_e, S, F0, false);   
+//        }
+//    }
+//    
+//    public double alphaValue(double[] params) {
+//        double value = 0.0;
+//        for (int iSite : activeSiteVector) {
+//            Site site = siteHash.get(iSite);
+//            value += site.computeLogLikelihoodAlpha(params, iTimePoint);   
+//        }
+//        return -value;
+//    }
+//
+//    
+//    public double globalValue(double[] params) {
+//        double value = 0.0;
+//        // Distribute parameters as appropriately
+//        double alpha_e = params[0];
+//        double S = params[1];
+//        double F0 = params[2];
+//        double beta_e = 10.0;
+//        for (int iSite : activeSiteVector) {
+//            Site site = siteHash.get(iSite);
+//            value += site.computeLogLikelihood(alpha_e, beta_e, S, F0, false);   
+//        }
+//        if (iter%10 == 0) {  // Print stuff
+//            System.out.format("zzz\t%d\t%10.4f\t%12.6f  %12.6f\t%10.8f\t%10.8f      ",
+//                    iter, value, alpha_e, beta_e, S, F0);
+//            System.out.println();
+//        }
+//        iter++;
+//        return -value;
+//    }
 }    
     
 
