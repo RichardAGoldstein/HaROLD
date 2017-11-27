@@ -33,16 +33,7 @@ public class Cluster {
     Vector<Assignment> assignmentVector = new Vector<>();
     DataSet dataSet = null;
 
-//    double[] lb_glob = {1.0E-8, 1.0E-8, 1.0E-8};  // lower bound on global params (alpha_e, S, F0)
-//    double[] ub_glob = {0.1, 0.01, 1.0};  // upper bound on global params
-//    double[] lb_alpha = null;  // lower bound on alphas
-//    double[] ub_alpha = null;  // upper bound on alphas
-//    double alpha_e = 0.1;
-//    double beta_e = 10.0;
-//    double F0 = 0.02;
-//    double S = 0.0001;
-//    double[][] alpha = null;
-    
+     
     static Random random = new Random(435027);
     static boolean verbose = true; // print lots of intermediate results
     static double useFrac = 1.0;  // what fraction of sites to use (chosen randomly)
@@ -55,8 +46,6 @@ public class Cluster {
      */
     public static void main(String[] args) {
         Cluster clus = new Cluster(args);
-//        clus.trial();
-//        clus.run(args);
     }
 
     
@@ -74,12 +63,6 @@ public class Cluster {
     
     void run() {
         
-        dataSet.setOptType(1, 2);
-        double[][] alphaHap = {{2.1019, 512.0}, {1.523, 512.0}, {0.00425, 0.0973}};
-        double alpha_C = 54.12;
-        double alpha_E = 0.0886;
-        System.out.println(dataSet.computeTotalLogLikelihood(alphaHap, alpha_C, alpha_E));
-        System.exit(1);
         
         
         

@@ -86,7 +86,6 @@ public class DataSet implements MultivariateFunction{
                             line = buff.readLine();
                         }
                         int iSite = Integer.parseInt(line.split(",")[0]);
-                        if (iSite > 50000) eof = true; 
                         if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
@@ -160,19 +159,7 @@ public class DataSet implements MultivariateFunction{
     int getNTimePoints() {
         return nTimePoints;
     }
-//    
-//    void setStage(int iStage, double alpha_e, double beta_e, double S, double F0, double[][] alpha) {
-//        iter = 0;
-//        this.iStage = iStage;
-//        for (int iSite : activeSiteVector) {
-//            siteHash.get(iSite).setParams(iStage, alpha_e, beta_e, S, F0, alpha);   
-//        }
-//    }
-//    
-//    void setITimePoint(int iTimePoint) {
-//        this.iTimePoint = iTimePoint;
-//    }
-//    
+ 
     public double value(double[] params) {
         
         if (optType == 0) {
