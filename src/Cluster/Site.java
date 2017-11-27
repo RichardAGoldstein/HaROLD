@@ -123,11 +123,12 @@ public class Site {
 //                }
 //            }
 //        }
-//        if (!timePointHasData[0] && !timePointHasData[2] && iBaseMax[0] != iBaseMax[2]) {
-//            System.out.println(iSite + "\t" + Arrays.toString(presentBase) + "\t" + localAssignmentVector.size());
-//            for (Assignment assignment : localAssignmentVector) {
-//                System.out.println("\t" + Arrays.toString(assignment.assign));
-//            }
+////        if (!timePointHasData[0] && !timePointHasData[2] && iBaseMax[0] != iBaseMax[2]) {
+////            System.out.println(iSite + "\t" + Arrays.toString(presentBase) + "\t" + localAssignmentVector.size());
+////            for (Assignment assignment : localAssignmentVector) {
+////                System.out.println("\t" + Arrays.toString(assignment.assign));
+////            }
+//        if (!timePointHasData[0] || !timePointHasData[2] || iBaseMax[0] == iBaseMax[2]) {
 //            return false;
 //        }
         
@@ -167,18 +168,6 @@ public class Site {
                 sumFit += Math.exp(logFitnessAssign[iAssign]-bestAssignVal);
             }
             sumFit = bestAssignVal + Math.log(sumFit);
-//            System.out.println(iSite + "\t" + bestAssign + "\t" + Arrays.toString(localAssignmentVector.get(bestAssign).assign) 
-//                    + "\t" + localAssignmentVector.get(bestAssign).nPresent
-//                    + "\t" + Arrays.toString(reads[0]) + "\t" + Arrays.toString(reads[1]) + "\t" + Arrays.toString(reads[2]));
-//            for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-//                System.out.println("\t" + iAssign + "\t" + Arrays.toString(localAssignmentVector.get(iAssign).assign) 
-//                + "\t" + logFitnessAssign[iAssign]);
-//            }
-    //        System.out.print(iSite + "\t" + sumFit);
-    //        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-    //            System.out.print("\t" + Arrays.toString(reads[iTimePoint]));
-    //        }
-    //        System.out.println();
             return sumFit;
         }
     }

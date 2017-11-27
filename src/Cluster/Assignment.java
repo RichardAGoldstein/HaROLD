@@ -50,7 +50,8 @@ public class Assignment {
     void setAlphas(double[][] alphaHap, double alpha_C, double alpha_E) {
         this.alpha_C = alpha_C;
         this.alpha_E = alpha_E;
-        this.bEAlpha_E = nAbsent * alpha_E;
+//        this.bEAlpha_E = nAbsent * alpha_E;
+        this.bEAlpha_E = alpha_E;         // Removing b term
         
         nTimePoints = alphaHap.length;
         alpha_nuc = new double[nTimePoints][4];
@@ -80,27 +81,31 @@ public class Assignment {
     double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
         int[] N_Cs = new int[2];
         int N_C = 0;
+        int[] errors = new int[2];
         double logFitness = 2.0 * (logGammaSumCPlusE - logGammaAlpha_C);
+
         for (int iBase = 0; iBase < 4; iBase++) {
-            if (!present[iBase]) {
-                if (strandReads[0][iBase] > 0) {
-                    logFitness += Gamma.logGamma(strandReads[0][iBase] + alpha_E) - logGammaAlpha_E;
-                }
-                if (strandReads[1][iBase] > 0) {
-                    logFitness += Gamma.logGamma(strandReads[1][iBase] + alpha_E) - logGammaAlpha_E;
-                }
-            } else {
+            if (present[iBase]) {
                 if (reads[iBase] > 0) {
                     logFitness += Gamma.logGamma(reads[iBase] + alpha_nuc[iTimePoint][iBase]) - logGammaAlpha_nuc[iTimePoint][iBase];
                     N_Cs[0] += strandReads[0][iBase];
                     N_Cs[1] += strandReads[1][iBase];
                     N_C += reads[iBase];
                 }
+            } else {
+                errors[0] += strandReads[0][iBase];
+                errors[1] += strandReads[1][iBase];
             }
         }
         logFitness += (logGammaSumAlpha[iTimePoint] - Gamma.logGamma(N_C + sumAlpha[iTimePoint]))
                 + (Gamma.logGamma(N_Cs[0] + alpha_C) - Gamma.logGamma(totStrand[0] + alpha_C  + bEAlpha_E))
                 + (Gamma.logGamma(N_Cs[1] + alpha_C) - Gamma.logGamma(totStrand[1] + alpha_C  + bEAlpha_E));
+        if (errors[0] > 0) {
+            logFitness += Gamma.logGamma(errors[0] + alpha_E) - logGammaAlpha_E;
+        }
+        if (errors[1] > 0) {
+            logFitness += Gamma.logGamma(errors[1] + alpha_E) - logGammaAlpha_E;
+        }
         if (false) {
             System.out.println(logFitness + "\t" + N_C + "\t" + N_Cs[0] + "\t" 
                     + N_Cs[1] + "\t" + Arrays.toString(reads) + "\t" + Arrays.toString(assign) + "\t" 

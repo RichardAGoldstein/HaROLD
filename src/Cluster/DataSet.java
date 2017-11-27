@@ -36,9 +36,9 @@ public class DataSet implements MultivariateFunction{
     int optType = 0;
     int optTimePoint = 0;
     
-    double[][] currentAlphaHap = null;
+    double[][] currentAlphaHap = {{3.0, 0.1}, {3.0, 0.1}, {0.1, 3.0}};
     double currentAlpha_C = 1.0;
-    double currentAlpha_E = 0.01;
+    double currentAlpha_E = 0.0001;
     
     int iCount = 0;
 
@@ -112,12 +112,12 @@ public class DataSet implements MultivariateFunction{
         }
         
         System.out.println(activeSiteVector.size() + "\t" + variableSiteVector.size());
-        currentAlphaHap = new double[nTimePoints][nHaplo];
-        for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                currentAlphaHap[iTimePoint][iHaplo] = 0.1*iHaplo + 0.1;
-            }
-        }
+//        currentAlphaHap = new double[nTimePoints][nHaplo];
+//        for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
+//            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+//                currentAlphaHap[iTimePoint][iHaplo] = 0.1*iHaplo + 0.1;
+//            }
+//        }
         currentAlpha_C = 0.5;
         currentAlpha_E = 0.001;
     }

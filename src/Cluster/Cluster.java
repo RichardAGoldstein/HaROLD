@@ -62,20 +62,25 @@ public class Cluster {
     }
     
     void run() {
-        
-        
-        
-        
+//        double[][] alpha_Hap = {{1.1546025399801536, 128.0}, {0.9498771171665635, 128.0}, {12.752272828273492, 0.14589589761908447}};
+//        double alpha_C = 0.02320;
+//        double alpha_E = 0.05026;
+//        System.out.println(dataSet.computeTotalLogLikelihood(alpha_Hap, alpha_C, alpha_E));
+//        System.exit(1);
+//        
         double trustRadius = 0.01;
         double maxValue = 1.0;
+        double[] optPoint = null;
+        
         for (int iIter = 0; iIter < 10; iIter++) {
             trustRadius = Math.max(1.0E-6, Math.pow(0.1, iIter+2));
-            maxValue = Math.min(1000.0, Math.pow(2.0, iIter));
+            maxValue = Math.min(1000.0, Math.pow(2.0, iIter+2));
             MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,trustRadius);
             double[] lb_alpha = new double[nHaplo];
             Arrays.fill(lb_alpha, 1.0E-8);
             double[] ub_alpha = new double[nHaplo];
             Arrays.fill(ub_alpha, maxValue);
+            optPoint = new double[nHaplo];
             
             for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) { 
                 dataSet.setOptType(1, iTimePoint);
@@ -85,7 +90,12 @@ public class Cluster {
                     GoalType.MINIMIZE,
                     new ObjectiveFunction(dataSet),
                     new SimpleBounds(lb_alpha,ub_alpha)};
-                dataSet.currentAlphaHap[iTimePoint] = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+                optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+                System.out.println(Arrays.toString(optPoint));
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    dataSet.currentAlphaHap[iTimePoint][iHaplo] = optPoint[iHaplo]; 
+                }
+                
             }
             
             optimize = new BOBYQAOptimizer(4,0.01,trustRadius);
@@ -97,6 +107,7 @@ public class Cluster {
             double[] initial = new double[2];
             initial[0] = dataSet.currentAlpha_C;
             initial[1] = dataSet.currentAlpha_E;
+            optPoint = new double[2];
             
             OptimizationData[] parm = new OptimizationData[]{
                 new InitialGuess(initial),
@@ -104,7 +115,8 @@ public class Cluster {
                 GoalType.MINIMIZE,
                 new ObjectiveFunction(dataSet),
                 new SimpleBounds(lb_alpha,ub_alpha)};
-            double[] optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+            optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+            System.out.println(Arrays.toString(optPoint));
             dataSet.currentAlpha_C = optPoint[0];
             dataSet.currentAlpha_E = optPoint[1];
         }
