@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Vector;
 import org.apache.commons.math3.analysis.MultivariateFunction;
+import org.apache.commons.math3.special.Gamma;
 
 /**
  *
@@ -20,8 +21,9 @@ import org.apache.commons.math3.analysis.MultivariateFunction;
 public class DataSet implements MultivariateFunction{
     
     Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
-    Vector<Integer> activeSiteVector = new Vector<Integer>();  // List of sites that are actively considered
-    Vector<Integer> allSiteVector = new Vector<Integer>();// List of all sites  
+    Vector<Site> activeSiteVector = new Vector<>();  // List of sites that are actively considered
+    Vector<Integer> allSiteVector = new Vector<>();// List of all sites 
+    Vector<Site> variableSiteVector = new Vector<>(); // List of all variable sites
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;
     boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
@@ -80,7 +82,11 @@ public class DataSet implements MultivariateFunction{
                     if (line == null) {
                             eof = true;
                     } else {
+                        if (line.contains("Position")) {
+                            line = buff.readLine();
+                        }
                         int iSite = Integer.parseInt(line.split(",")[0]);
+                        if (iSite > 50000) eof = true; 
                         if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
@@ -99,30 +105,47 @@ public class DataSet implements MultivariateFunction{
         for (int iSite : allSiteVector) {  // Create activeSiteVector
             Site site = siteHash.get(iSite);
             if (site.isActive()) {    // do simple sums
-                activeSiteVector.add(iSite);
+                activeSiteVector.add(site);
+                if (!site.siteConserved) {
+                    variableSiteVector.add(site);
+                }
             } 
         }
+        
+        System.out.println(activeSiteVector.size() + "\t" + variableSiteVector.size());
         currentAlphaHap = new double[nTimePoints][nHaplo];
         for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                currentAlphaHap[iTimePoint][iHaplo] = iHaplo + 1.0;
+                currentAlphaHap[iTimePoint][iHaplo] = 0.1*iHaplo + 0.1;
             }
         }
-        currentAlpha_C = 1.0;
+        currentAlpha_C = 0.5;
         currentAlpha_E = 0.001;
     }
     
     double computeTotalLogLikelihood(double[][] alphaHap, double alpha_C, double alpha_E) {
+        double fixedBEAlpha_E = 3.0 * alpha_E;
+        double logGammaAlpha_C = Gamma.logGamma(alpha_C);
+        double fixedLogGammaSumCPlusE = Gamma.logGamma(alpha_C + 3.0 * alpha_E);
         for (Assignment assignment : assignmentVector) {
             assignment.setAlphas(alphaHap, alpha_C, alpha_E);
         }
         double totalLogLikelihood = 0.0;
-        for (int iSite : activeSiteVector) {
-            Site site = siteHash.get(iSite);
-            totalLogLikelihood += site.computeSiteLogLikelihood();
+        if (optType == 0) {
+            for (Site site : activeSiteVector) {
+                totalLogLikelihood += site.computeSiteLogLikelihood(alpha_C, fixedBEAlpha_E, logGammaAlpha_C, fixedLogGammaSumCPlusE);
+            }
+            return totalLogLikelihood;
+        } else {
+            for (Site site : variableSiteVector) {
+                totalLogLikelihood += site.computeSiteLogLikelihood(alpha_C, fixedBEAlpha_E, logGammaAlpha_C, fixedLogGammaSumCPlusE);
+            }
+            return totalLogLikelihood;            
         }
-        return totalLogLikelihood;
     }
+    
+    
+    
     
     void setOptType(int optType, int optTimePoint) {
         this.optType = optType;
@@ -154,7 +177,7 @@ public class DataSet implements MultivariateFunction{
         
         if (optType == 0) {
             double val = computeTotalLogLikelihood(currentAlphaHap, params[0], params[1]);
-            if (iCount % 100 == 0) {
+            if (iCount % 10 == 0) {
                 System.out.print("xxx\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }
@@ -172,7 +195,7 @@ public class DataSet implements MultivariateFunction{
                 }
             }
             double val = computeTotalLogLikelihood(newAlphaHap, currentAlpha_C, currentAlpha_E);
-            if (iCount % 100 == 0) {
+            if (iCount % 10 == 0) {
                 System.out.print("xxx\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }

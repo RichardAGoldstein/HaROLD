@@ -77,7 +77,7 @@ public class Assignment {
     }
 
     
-    double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand ) {
+    double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
         int[] N_Cs = new int[2];
         int N_C = 0;
         double logFitness = 2.0 * (logGammaSumCPlusE - logGammaAlpha_C);

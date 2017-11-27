@@ -73,12 +73,26 @@ public class Cluster {
     }
     
     void run() {
+        
+        dataSet.setOptType(1, 2);
+        double[][] alphaHap = {{2.1019, 512.0}, {1.523, 512.0}, {0.00425, 0.0973}};
+        double alpha_C = 54.12;
+        double alpha_E = 0.0886;
+        System.out.println(dataSet.computeTotalLogLikelihood(alphaHap, alpha_C, alpha_E));
+        System.exit(1);
+        
+        
+        
+        double trustRadius = 0.01;
+        double maxValue = 1.0;
         for (int iIter = 0; iIter < 10; iIter++) {
-            MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,1.0E-6);
+            trustRadius = Math.max(1.0E-6, Math.pow(0.1, iIter+2));
+            maxValue = Math.min(1000.0, Math.pow(2.0, iIter));
+            MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,trustRadius);
             double[] lb_alpha = new double[nHaplo];
             Arrays.fill(lb_alpha, 1.0E-8);
             double[] ub_alpha = new double[nHaplo];
-            Arrays.fill(ub_alpha, 100.0);
+            Arrays.fill(ub_alpha, maxValue);
             
             for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) { 
                 dataSet.setOptType(1, iTimePoint);
@@ -91,11 +105,11 @@ public class Cluster {
                 dataSet.currentAlphaHap[iTimePoint] = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
             }
             
-            optimize = new BOBYQAOptimizer(4,0.01,1.0E-6);
+            optimize = new BOBYQAOptimizer(4,0.01,trustRadius);
             lb_alpha = new double[2];
             Arrays.fill(lb_alpha, 1.0E-8);
             ub_alpha = new double[2];
-            Arrays.fill(ub_alpha, 100.0);
+            Arrays.fill(ub_alpha, maxValue);
             dataSet.setOptType(0, 0);
             double[] initial = new double[2];
             initial[0] = dataSet.currentAlpha_C;
