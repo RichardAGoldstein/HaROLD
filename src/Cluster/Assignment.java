@@ -22,7 +22,8 @@ public class Assignment {
     int nTimePoints = 0;
     
     double[][] alphaHep = null;
-    double epsilon = 0.0;
+    double[] quartiles = null;
+    int nQuartiles = 0;
     double S = 0.0;
     double[][] alpha_nuc = null;
     double alpha_C = 0.0;
@@ -50,9 +51,10 @@ public class Assignment {
         nAbsent = 4 - nPresent;
     }
     
-    void setAlphas(double[][] alphaHap, double epsilon, double S) {
+    void setAlphas(double[][] alphaHap, double[] quartiles, double S) {
         this.alphaHep = alphaHep;
-        this.epsilon = epsilon;
+        this.quartiles = quartiles;
+        nQuartiles = quartiles.length;
         this.S = S;
         
         nTimePoints = alphaHap.length;
@@ -72,9 +74,21 @@ public class Assignment {
         logFitness2[1] = Gamma.logGamma(4.0) - Gamma.logGamma(totStrand[1]+4.0);
         for (int iBase = 0; iBase < 4; iBase++) {
             if (reads[iBase] > 0) {
-                double prob = alpha_nuc[iTimePoint][iBase] + (1.0 - 4.0 * alpha_nuc[iTimePoint][iBase]) * epsilon;
-                logFitness1[0] += strandReads[0][iBase] * Math.log(prob);
-                logFitness1[1] += strandReads[1][iBase] * Math.log(prob);
+                double[][] terms = new double[2][nQuartiles];
+                double maxTerm = -1.0E10;
+                for (int iQuartile = 0; iQuartile < nQuartiles; iQuartile++) {
+                    double prob = alpha_nuc[iTimePoint][iBase] + (1.0 - 4.0 * alpha_nuc[iTimePoint][iBase]) * quartiles[iQuartile];
+                    terms[0][iQuartile] = strandReads[0][iBase] * Math.log(prob) - Math.log(1.0*nQuartiles);
+                    terms[1][iQuartile] = strandReads[1][iBase] * Math.log(prob) - Math.log(1.0*nQuartiles);
+                    maxTerm = Math.max(Math.max(maxTerm, terms[0][iQuartile]), terms[1][iQuartile]);
+                }
+                double[] sumTerms = new double[2];
+                for (int iQuartile = 0; iQuartile < nQuartiles; iQuartile++) {
+                    sumTerms[0] += Math.exp(terms[0][iQuartile] - maxTerm);
+                    sumTerms[1] += Math.exp(terms[1][iQuartile] - maxTerm);
+                }    
+                logFitness1[0] += maxTerm + Math.log(sumTerms[0]);
+                logFitness1[1] += maxTerm + Math.log(sumTerms[1]);
                 logFitness2[0] += Gamma.logGamma(strandReads[0][iBase] + 1.0);
                 logFitness2[1] += Gamma.logGamma(strandReads[1][iBase] + 1.0);
             }
