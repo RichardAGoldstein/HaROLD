@@ -25,27 +25,24 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  */
 public class Cluster {
     static int maxBases = 4; // Maximum number of different bases
-            
     int nHaplo = 3; // Number of haplotypes
-    int[][] assign = null; // different possible assignments of bases to haplotypes
-    boolean addFlat = false;  // Add a 'garbage' model for random outliers *** NOT IMPLEMENTED***
+//    int[][] assign = null; // different possible assignments of bases to haplotypes
+    int nTimePoints = 0;
     
     Vector<Assignment> assignmentVector = new Vector<>();
     DataSet dataSet = null;
 
-     
     static Random random = new Random(435027);
     static boolean verbose = true; // print lots of intermediate results
     static double useFrac = 1.0;  // what fraction of sites to use (chosen randomly)
-//    int maxRound = 50;  // maximum number of global iterations
-//    double minDeltaLL = -1.0; // minimum change in log likelihood before stopping
     
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        Cluster clus = new Cluster(args);
+        Cluster cluster = new Cluster(args);
+        cluster.run();
     }
 
     
@@ -57,215 +54,88 @@ public class Cluster {
         }
         nHaplo = Integer.parseInt(args[1]);  // number of haplotypes
         constructAssignments();  // Construct possible assignments of bases to haplotypes
-        dataSet = new DataSet(args[0], nHaplo, assignmentVector, addFlat); // Construct dataset
-        run();
+        dataSet = new DataSet(args[0], nHaplo, assignmentVector); // Construct dataset
+        nTimePoints = dataSet.nTimePoints;
     }
     
+    double[][] initialiseAlphaParams() {
+        double remaining = 1.0;
+        double[][] alphaParams = new double[nTimePoints][nHaplo-1];
+        for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                alphaParams[iTimePoint][iHaplo] = (1.0 + 0.1 * (random.nextDouble() - 0.5)) * 1.0/(nHaplo-iHaplo);
+            }
+        }
+        return alphaParams;       
+    }
+    
+    
     void run() {
-//        double[][] alpha_Hap = {{1.1546025399801536, 128.0}, {0.9498771171665635, 128.0}, {12.752272828273492, 0.14589589761908447}};
-//        double alpha_C = 0.02320;
-//        double alpha_E = 0.05026;
-//        System.out.println(dataSet.computeTotalLogLikelihood(alpha_Hap, alpha_C, alpha_E));
-//        System.exit(1);
-//        
+        double initialEpsilon = 0.1;
+        double initialS = 0.0001;
+        double[][] currentAlphaParams = initialiseAlphaParams();
+        double[] currentErrorParams = new double[2];
+        currentErrorParams[0] = initialEpsilon;
+        currentErrorParams[1] = initialS;
         double trustRadius = 0.01;
-        double maxValue = 1.0;
         double[] optPoint = null;
         
         for (int iIter = 0; iIter < 10; iIter++) {
-            trustRadius = Math.max(1.0E-6, Math.pow(0.1, iIter+2));
-            maxValue = Math.min(1000.0, Math.pow(2.0, iIter+2));
-            MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,trustRadius);
-            double[] lb_alpha = new double[nHaplo];
-            Arrays.fill(lb_alpha, 1.0E-8);
-            double[] ub_alpha = new double[nHaplo];
-            Arrays.fill(ub_alpha, maxValue);
-            optPoint = new double[nHaplo];
             
-            for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) { 
-                dataSet.setOptType(1, iTimePoint);
-                OptimizationData[] parm = new OptimizationData[]{
-                    new InitialGuess(dataSet.currentAlphaHap[iTimePoint]),
-                    new MaxEval(1000000),
-                    GoalType.MINIMIZE,
-                    new ObjectiveFunction(dataSet),
-                    new SimpleBounds(lb_alpha,ub_alpha)};
-                optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-                System.out.println(Arrays.toString(optPoint));
-                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                    dataSet.currentAlphaHap[iTimePoint][iHaplo] = optPoint[iHaplo]; 
-                }
-                
-            }
-            
-            optimize = new BOBYQAOptimizer(4,0.01,trustRadius);
-            lb_alpha = new double[2];
-            Arrays.fill(lb_alpha, 1.0E-8);
-            ub_alpha = new double[2];
-            Arrays.fill(ub_alpha, maxValue);
-            dataSet.setOptType(0, 0);
-            double[] initial = new double[2];
-            initial[0] = dataSet.currentAlpha_C;
-            initial[1] = dataSet.currentAlpha_E;
-            optPoint = new double[2];
-            
-            OptimizationData[] parm = new OptimizationData[]{
-                new InitialGuess(initial),
-                new MaxEval(1000000),
-                GoalType.MINIMIZE,
-                new ObjectiveFunction(dataSet),
-                new SimpleBounds(lb_alpha,ub_alpha)};
-            optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-            System.out.println(Arrays.toString(optPoint));
-            dataSet.currentAlpha_C = optPoint[0];
-            dataSet.currentAlpha_E = optPoint[1];
-        }
-    }
-    
-//    
-//    double adjustGlobals() {  // Find best parameters for understanding variability
-//        int nVar = 3;  // set up and initialise parameters
-//        double[] params = new double[3];
-//        params[0] = alpha_e;
-//        params[1] = S;
-//        params[2] = F0;
-//
-//        // Optimise 
-//        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nVar,0.01,1.0E-6);
-//        OptimizationData[] parm = new OptimizationData[]{
-//            new InitialGuess(params),
-//            new MaxEval(1000000),
-//            GoalType.MINIMIZE,
-//            new ObjectiveFunction(dataSet),
-//            new SimpleBounds(lb_glob,ub_glob)};
-//        double[] best = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-//        alpha_e = best[0];
-//        S = best[1];
-//        F0 = best[2];
-//        double value = dataSet.value(best);
-//        System.out.format("zzz\tConv'd\t%10.4f\t%12.6f  %12.6f\t%10.8f\t%10.8f\n",
-//            value, alpha_e, beta_e, S, F0);
-//        return value;
-//    }
-//    }
-    
-    
-    
-//    void run(String[] args) {
-//        // Initialise stuff
-//        
-//        alpha = new double[dataSet.getNTimePoints()][nHaplo];
-//        lb_alpha = new double[nHaplo];
-//        Arrays.fill(lb_alpha, 1.0E-8);
-//        ub_alpha = new double[nHaplo];
-//        Arrays.fill(ub_alpha, 100.0);
-//        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-//            for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
-//                alpha[iTimePoint][iHaplo] = 2.0 * random.nextDouble();
-//            }
-//        }
-//        // Optimise parameters
-//        optimiseModel();  
-//    }
-//    
-//    void optimiseModel() {
-//        printColHeaders(0, 0);
-//        dataSet.setStage(0, alpha_e, beta_e, S, F0, alpha);  // Adjust global parameters and E step
-//        double previous = adjustGlobals();  // Keep track of improvements
-//        double current = previous + 1000.0;
-//        
-//        int iRound_0 = 0;  // loop over global optimisations
-//        boolean finished = false;
-//        while (!finished) {
-//            printColHeaders(1, dataSet.getNTimePoints());
-//            //  loop over EM steps for inner loop
-//            double valueAlpha = 0.0;
-//            dataSet.setStage(1,alpha_e, beta_e, S, F0, alpha);
-//            for (int iRound_1 = 0; iRound_1 < 50; iRound_1++) {
-//                valueAlpha = 0.0;
-//                // M step for each timepoint
-//                for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
-//                    dataSet.setITimePoint(iTimePoint);
-//                    valueAlpha += adjustAlphas(iTimePoint);
-//                }
-//                // E step
-//                dataSet.reAdjust(alpha_e, beta_e, S, F0);
-//                
-//                if (iRound_1%10 == 0) {
-//                    System.out.format("zzz\t%d\t%10.4f   ", iRound_1, valueAlpha);
-//                    for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
-//                        System.out.print("    ");
-//                        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-//                            System.out.format("  %8.4f", alpha[iTimePoint][iHaplo]);
-//                        }
-//                    }
-//                    System.out.println();      
-//                }
-//            }
+            dataSet.assignHaplotypes(currentAlphaParams, currentErrorParams);
 //            
-//            System.out.format("zzz\tConv'g\t%10.4f   ", valueAlpha);
-//            for (int iTimePoint = 0; iTimePoint < dataSet.getNTimePoints(); iTimePoint++) {
-//                System.out.print("    ");
+//            trustRadius = Math.max(1.0E-6, Math.pow(0.1, iIter+2));
+//            MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo-2,0.01,trustRadius);
+//            double[] lb_alpha = new double[nHaplo-1];
+//            Arrays.fill(lb_alpha, 1.0E-8);
+//            double[] ub_alpha = new double[nHaplo-1];
+//            Arrays.fill(ub_alpha, 1.0);
+//            optPoint = new double[nHaplo-1];
+//            
+//            for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) { 
+//                dataSet.setOptType(1, iTimePoint);
+//                OptimizationData[] parm = new OptimizationData[]{
+//                    new InitialGuess(currentAlphaParams),
+//                    new MaxEval(1000000),
+//                    GoalType.MINIMIZE,
+//                    new ObjectiveFunction(dataSet),
+//                    new SimpleBounds(lb_alpha,ub_alpha)};
+//                optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+//                System.out.println(Arrays.toString(optPoint));
 //                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-//                    System.out.format("  %8.4f", alpha[iTimePoint][iHaplo]);
+//                    currentAlphaParams[iHaplo] = optPoint[iHaplo]; 
 //                }
-//            }
-//            System.out.println();
+//                
+            }
 //            
-//            printColHeaders(0, 0);
-//            dataSet.setStage(0, alpha_e, beta_e, S, F0, alpha); // Adjust global parameters and E step
-//            previous = current;
-//            current = adjustGlobals();
-//            iRound_0++;
-//            if (iRound_0 > maxRound || (current - previous)>minDeltaLL) {
-//                finished = true;
-//            }
+//            optimize = new BOBYQAOptimizer(4,0.01,trustRadius);
+//            lb_alpha = new double[2];
+//            Arrays.fill(lb_alpha, 1.0E-8);
+//            ub_alpha = new double[2];
+//            Arrays.fill(ub_alpha, 1.0);
+//            dataSet.setOptType(0, 0);
+//            double[] initial = new double[2];
+//            initial[0] = dataSet.currentEpsilon;
+//            initial[1] = dataSet.currentS;
+//            optPoint = new double[2];
+//            
+//            OptimizationData[] parm = new OptimizationData[]{
+//                new InitialGuess(initial),
+//                new MaxEval(1000000),
+//                GoalType.MINIMIZE,
+//                new ObjectiveFunction(dataSet),
+//                new SimpleBounds(lb_alpha,ub_alpha)};
+//            optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+//            System.out.println(Arrays.toString(optPoint));
+//            dataSet.currentEpsilon = optPoint[0];
+//            dataSet.currentS = optPoint[1];
 //        }
-//        dataSet.printHaplotypes(alpha_e, beta_e, S, F0);
-//    }
-//
-//    double adjustAlphas(int iTimePoint) {  // Find best parameters for understanding variability
-//        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nHaplo,0.01,1.0E-6);
-//        OptimizationData[] parm = new OptimizationData[]{
-//            new InitialGuess(alpha[iTimePoint]),
-//            new MaxEval(1000000),
-//            GoalType.MINIMIZE,
-//            new ObjectiveFunction(dataSet),
-//            new SimpleBounds(lb_alpha,ub_alpha)};
-//        alpha[iTimePoint] = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-//        return dataSet.value(alpha[iTimePoint]);
-//    }
-//    
-//    
-//    double adjustGlobals() {  // Find best parameters for understanding variability
-//        int nVar = 3;  // set up and initialise parameters
-//        double[] params = new double[3];
-//        params[0] = alpha_e;
-//        params[1] = S;
-//        params[2] = F0;
-//
-//        // Optimise 
-//        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*nVar,0.01,1.0E-6);
-//        OptimizationData[] parm = new OptimizationData[]{
-//            new InitialGuess(params),
-//            new MaxEval(1000000),
-//            GoalType.MINIMIZE,
-//            new ObjectiveFunction(dataSet),
-//            new SimpleBounds(lb_glob,ub_glob)};
-//        double[] best = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-//        alpha_e = best[0];
-//        S = best[1];
-//        F0 = best[2];
-//        double value = dataSet.value(best);
-//        System.out.format("zzz\tConv'd\t%10.4f\t%12.6f  %12.6f\t%10.8f\t%10.8f\n",
-//            value, alpha_e, beta_e, S, F0);
-//        return value;
-//    }
+    }
+
        
     void constructAssignments() {
         // Construct all possible ways of assigning positions in haplotypes to specific bases
         int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
-        assign = new int[nAssignments][nHaplo];   // record of base found in iHaplo in assignment iAssign 
         for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
             Assignment newAssignment = new Assignment(iAssign, nHaplo);
             assignmentVector.add(newAssignment);      

@@ -26,7 +26,6 @@ public class DataSet implements MultivariateFunction{
     Vector<Site> variableSiteVector = new Vector<>(); // List of all variable sites
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;
-    boolean addFlat = false;  // Add a 'garbage' model for random outliers  ***NOT IMPLEMENTED***
     int nTimePoints = 0;   // Number of time points
     
     int iter = 0;  // Initialise count of iterations   
@@ -36,20 +35,15 @@ public class DataSet implements MultivariateFunction{
     int optType = 0;
     int optTimePoint = 0;
     
-    double[][] currentAlphaHap = {{3.0, 0.1}, {3.0, 0.1}, {0.1, 3.0}};
-    double currentAlpha_C = 1.0;
-    double currentAlpha_E = 0.0001;
+    double[][] currentAlphaHap = null;
+    double currentS = 0.0001;
+    double currentEpsilon = 0.01;
     
     int iCount = 0;
 
-    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, boolean addFlat) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
-        this.addFlat = addFlat;
-        if (addFlat)  {
-            System.out.println("addFlat not yet implemented");
-            System.exit(1);
-        }
         Vector<String> fileNameVector = new Vector<String>(); // list of files to be read in one for each time point
         try {
             FileReader file = new FileReader(fileNameFile); 
@@ -94,7 +88,7 @@ public class DataSet implements MultivariateFunction{
                         siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site
                     }
                 }
-            }
+            }     
             catch (IOException e) {
                 System.out.println("Error: File not found (IO error)");
                 System.exit(1);
@@ -110,16 +104,10 @@ public class DataSet implements MultivariateFunction{
                 }
             } 
         }
-        
-        System.out.println(activeSiteVector.size() + "\t" + variableSiteVector.size());
-//        currentAlphaHap = new double[nTimePoints][nHaplo];
-//        for (int iTimePoint = 0; iTimePoint< nTimePoints; iTimePoint++) {
-//            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-//                currentAlphaHap[iTimePoint][iHaplo] = 0.1*iHaplo + 0.1;
-//            }
-//        }
-        currentAlpha_C = 0.5;
-        currentAlpha_E = 0.001;
+
+        currentS = 0.0001;
+        currentEpsilon = 0.01;
+        currentAlphaHap = new double[nTimePoints][nHaplo];
     }
     
     double computeTotalLogLikelihood(double[][] alphaHap, double alpha_C, double alpha_E) {
@@ -160,37 +148,64 @@ public class DataSet implements MultivariateFunction{
         return nTimePoints;
     }
  
-    public double value(double[] params) {
-        
-        if (optType == 0) {
-            double val = computeTotalLogLikelihood(currentAlphaHap, params[0], params[1]);
-            if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
-                System.out.println("\t" + val);
-            }
-            iCount++;
-            return -val;
-        } else if (optType == 1) {
-            double[][] newAlphaHap = new double[nTimePoints][nHaplo];
-            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                    if (iTimePoint != optTimePoint){
-                        newAlphaHap[iTimePoint][iHaplo] = currentAlphaHap[iTimePoint][iHaplo];
-                    } else {
-                        newAlphaHap[iTimePoint][iHaplo] = params[iHaplo];
-                    }
-                }
-            }
-            double val = computeTotalLogLikelihood(newAlphaHap, currentAlpha_C, currentAlpha_E);
-            if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
-                System.out.println("\t" + val);
-            }
-            iCount++;
-            return -val;
+    void assignHaplotypes(double[][] alphaParams, double[] errorParams) {
+        setParams(alphaParams, errorParams);
+        for (Site site : variableSiteVector) {
+           site.assignHaplotypes(currentAlphaHap, currentEpsilon, currentS);
         }
-        System.out.println("Error in optimisation");
-        System.exit(1);
+    }
+    
+    void setParams(double[][] alphaParams, double[] errorParams) {
+                double currentEpsilon = errorParams[0];
+        double currentS = errorParams[1];
+        double[] remaining = new double[nTimePoints];
+        Arrays.fill(remaining, 1.0);
+        for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                currentAlphaHap[iTimePoint][iHaplo] = remaining[iTimePoint] * alphaParams[iTimePoint][iHaplo];
+                remaining[iTimePoint] -= currentAlphaHap[iTimePoint][iHaplo];
+            }
+        }
+        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+            currentAlphaHap[iTimePoint][nHaplo-1] = remaining[iTimePoint];
+        }
+        for (Assignment assignment : assignmentVector) {
+            assignment.setAlphas(currentAlphaHap, currentEpsilon, currentS);
+        }
+    }
+    
+    
+    public double value(double[] params) {
+//        
+//        if (optType == 0) {
+//            double val = computeTotalLogLikelihood(currentAlphaHap, params[0], params[1]);
+//            if (iCount % 10 == 0) {
+//                System.out.print("xxx\t" + Arrays.toString(params));
+//                System.out.println("\t" + val);
+//            }
+//            iCount++;
+//            return -val;
+//        } else if (optType == 1) {
+//            double[][] newAlphaHap = new double[nTimePoints][nHaplo];
+//            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+//                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+//                    if (iTimePoint != optTimePoint){
+//                        newAlphaHap[iTimePoint][iHaplo] = currentAlphaHap[iTimePoint][iHaplo];
+//                    } else {
+//                        newAlphaHap[iTimePoint][iHaplo] = params[iHaplo];
+//                    }
+//                }
+//            }
+//            double val = computeTotalLogLikelihood(newAlphaHap, currentEpsilon, currentS);
+//            if (iCount % 10 == 0) {
+//                System.out.print("xxx\t" + Arrays.toString(params));
+//                System.out.println("\t" + val);
+//            }
+//            iCount++;
+//            return -val;
+//        }
+//        System.out.println("Error in optimisation");
+//        System.exit(1);
         return 0.0;
     }
     

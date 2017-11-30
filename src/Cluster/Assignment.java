@@ -21,6 +21,9 @@ public class Assignment {
     int nAbsent = 0;
     int nTimePoints = 0;
     
+    double[][] alphaHep = null;
+    double epsilon = 0.0;
+    double S = 0.0;
     double[][] alpha_nuc = null;
     double alpha_C = 0.0;
     double alpha_E = 0.0;
@@ -47,70 +50,49 @@ public class Assignment {
         nAbsent = 4 - nPresent;
     }
     
-    void setAlphas(double[][] alphaHap, double alpha_C, double alpha_E) {
-        this.alpha_C = alpha_C;
-        this.alpha_E = alpha_E;
-//        this.bEAlpha_E = nAbsent * alpha_E;
-        this.bEAlpha_E = alpha_E;         // Removing b term
+    void setAlphas(double[][] alphaHap, double epsilon, double S) {
+        this.alphaHep = alphaHep;
+        this.epsilon = epsilon;
+        this.S = S;
         
         nTimePoints = alphaHap.length;
-        alpha_nuc = new double[nTimePoints][4];
-        logGammaAlpha_nuc = new double[nTimePoints][4];
-        sumAlpha = new double[nTimePoints];
-        logGammaSumAlpha = new double[nTimePoints];
-        
-        logGammaAlpha_E = Gamma.logGamma(alpha_E);
-        logGammaAlpha_C = Gamma.logGamma(alpha_C);
-        logGammaSumCPlusE = Gamma.logGamma(alpha_C + bEAlpha_E);
-        
+        alpha_nuc = new double[nTimePoints][4];       
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                 alpha_nuc[iTimePoint][assign[iHaplo]] += alphaHap[iTimePoint][iHaplo];
             }
-
-            for (int iNuc = 0; iNuc < 4; iNuc++) {
-                sumAlpha[iTimePoint] += alpha_nuc[iTimePoint][iNuc];
-                logGammaAlpha_nuc[iTimePoint][iNuc] = Gamma.logGamma(alpha_nuc[iTimePoint][iNuc]);
-            }
-            logGammaSumAlpha[iTimePoint] = Gamma.logGamma(sumAlpha[iTimePoint]);
         }
-
     }
 
     
     double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
-        int[] N_Cs = new int[2];
-        int N_C = 0;
-        int[] errors = new int[2];
-        double logFitness = 2.0 * (logGammaSumCPlusE - logGammaAlpha_C);
-
+        double[] logFitness1 = new double[2];
+        double[] logFitness2 = new double[2];
+        logFitness2[0] = Gamma.logGamma(4.0) - Gamma.logGamma(totStrand[0]+4.0);
+        logFitness2[1] = Gamma.logGamma(4.0) - Gamma.logGamma(totStrand[1]+4.0);
         for (int iBase = 0; iBase < 4; iBase++) {
-            if (present[iBase]) {
-                if (reads[iBase] > 0) {
-                    logFitness += Gamma.logGamma(reads[iBase] + alpha_nuc[iTimePoint][iBase]) - logGammaAlpha_nuc[iTimePoint][iBase];
-                    N_Cs[0] += strandReads[0][iBase];
-                    N_Cs[1] += strandReads[1][iBase];
-                    N_C += reads[iBase];
-                }
-            } else {
-                errors[0] += strandReads[0][iBase];
-                errors[1] += strandReads[1][iBase];
+            if (reads[iBase] > 0) {
+                double prob = alpha_nuc[iTimePoint][iBase] + (1.0 - 4.0 * alpha_nuc[iTimePoint][iBase]) * epsilon;
+                logFitness1[0] += strandReads[0][iBase] * Math.log(prob);
+                logFitness1[1] += strandReads[1][iBase] * Math.log(prob);
+                logFitness2[0] += Gamma.logGamma(strandReads[0][iBase] + 1.0);
+                logFitness2[1] += Gamma.logGamma(strandReads[1][iBase] + 1.0);
             }
         }
-        logFitness += (logGammaSumAlpha[iTimePoint] - Gamma.logGamma(N_C + sumAlpha[iTimePoint]))
-                + (Gamma.logGamma(N_Cs[0] + alpha_C) - Gamma.logGamma(totStrand[0] + alpha_C  + bEAlpha_E))
-                + (Gamma.logGamma(N_Cs[1] + alpha_C) - Gamma.logGamma(totStrand[1] + alpha_C  + bEAlpha_E));
-        if (errors[0] > 0) {
-            logFitness += Gamma.logGamma(errors[0] + alpha_E) - logGammaAlpha_E;
-        }
-        if (errors[1] > 0) {
-            logFitness += Gamma.logGamma(errors[1] + alpha_E) - logGammaAlpha_E;
-        }
-        if (false) {
-            System.out.println(logFitness + "\t" + N_C + "\t" + N_Cs[0] + "\t" 
-                    + N_Cs[1] + "\t" + Arrays.toString(reads) + "\t" + Arrays.toString(assign) + "\t" 
-                    + Arrays.toString(alpha_nuc));
-        }
+        double logFit11 = logFitness1[0] + logFitness1[1];
+        double logFit12 = logFitness1[0] + logFitness2[1];
+        double logFit21 = logFitness2[0] + logFitness1[1];
+        double logFit22 = logFitness2[0] + logFitness2[1];
+        double logFitnessMax = Math.max(Math.max(logFit11, logFit12), Math.max(logFit21, logFit22));
+        double logFitness = (1.0 - S) * (1.0 - S) * Math.exp(logFit11 - logFitnessMax)
+                            + (1.0 - S) * S * Math.exp(logFit12 - logFitnessMax)
+                            + (1.0 - S) * S * Math.exp(logFit21 - logFitnessMax)
+                            + S * S * Math.exp(logFit22 - logFitnessMax);
+        logFitness = logFitnessMax + Math.log(logFitness);
+//        System.out.println(iTimePoint + "\t" + Arrays.toString(strandReads[0]) + "  " 
+//                + Arrays.toString(strandReads[1]) + "\t" + 
+//                Arrays.toString(assign) + "\t" + Arrays.toString(alpha_nuc[iTimePoint]) + "\t" + logFitness
+//                + "\t" + logFit11 + "  " + logFit12 + "  " + logFit21 + "  " + logFit22);
         return logFitness;
     }
     

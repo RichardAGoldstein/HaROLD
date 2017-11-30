@@ -22,6 +22,7 @@ public class Site {
     int nBases = 0;
     Vector<Assignment> assignmentVector = null;
     Vector<Assignment> localAssignmentVector = new Vector<>();
+    double[] probAssignment = null;
     int nAssignments = 0;
     String[] baseString = {"A", "C", "G", "T"};
     
@@ -107,35 +108,44 @@ public class Site {
                 localAssignmentVector.add(assignment);
             }
         }
-//        if (Cluster.random.nextDouble() < 0.001) {
-//            System.out.println(iSite + "\t" + Arrays.toString(presentBase) + "\t" + localAssignmentVector.size());
-//            for (Assignment assignment : localAssignmentVector) {
-//                System.out.println("\t" + Arrays.toString(assignment.present));
-//            }
-//        }
-//        int[] iBaseMax = new int[nTimePoints];
-//        int[] nObsMax = new int[nTimePoints];
-//        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-//            for (int iBase = 0; iBase < 4; iBase++) {
-//                if (reads[iTimePoint][iBase] > nObsMax[iTimePoint]) {
-//                    nObsMax[iTimePoint] = reads[iTimePoint][iBase];
-//                    iBaseMax[iTimePoint] = iBase;
-//                }
-//            }
-//        }
-////        if (!timePointHasData[0] && !timePointHasData[2] && iBaseMax[0] != iBaseMax[2]) {
-////            System.out.println(iSite + "\t" + Arrays.toString(presentBase) + "\t" + localAssignmentVector.size());
-////            for (Assignment assignment : localAssignmentVector) {
-////                System.out.println("\t" + Arrays.toString(assignment.assign));
-////            }
-//        if (!timePointHasData[0] || !timePointHasData[2] || iBaseMax[0] == iBaseMax[2]) {
-//            return false;
-//        }
-        
         return siteActive;
     }
     
-    double computeSiteLogLikelihood(double alpha_C, double bEAlpha_E, double logGammaAlpha_C, double logGammaSumCPlusE) {
+    void assignHaplotypes(double[][] alphaHap, double epsilon, double S) {
+        System.out.println();
+        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+            System.out.println(Arrays.toString(strandReads[iTimePoint][0]) + "  "
+            + Arrays.toString(strandReads[iTimePoint][1]));
+        }
+        probAssignment = new double[localAssignmentVector.size()];
+        double[] logFitnessAssign = new double[localAssignmentVector.size()];
+        double sumProb = 0.0;
+        int bestAssign = -999;
+        double bestAssignVal = -1.0E20;
+        for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
+            Assignment assignment = localAssignmentVector.get(iAssign);
+            assignment.setAlphas(alphaHap, epsilon, S);
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                logFitnessAssign[iAssign] += 
+                        assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
+                                reads[iTimePoint], totStrand[iTimePoint], siteConserved);
+            }
+            if (logFitnessAssign[iAssign] > bestAssignVal) {
+                bestAssignVal = logFitnessAssign[iAssign];
+                bestAssign = iAssign;
+            }
+        }
+        for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
+            probAssignment[iAssign] = Math.exp(logFitnessAssign[iAssign]-bestAssignVal);
+            sumProb += probAssignment[iAssign];
+        }
+        for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
+            probAssignment[iAssign] /= sumProb;
+            System.out.println(Arrays.toString(localAssignmentVector.get(iAssign).assign) + "\t" + probAssignment[iAssign]);
+        }
+    }
+    
+    double computeSiteLogLikelihood(double alpha_C, double bEAlpha_E, double logGammaAlpha_C, double logGammaSumCPlusE) {  
         if (siteConserved) {
             double sumFit = 0.0;
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -159,6 +169,7 @@ public class Site {
                             assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
                                     reads[iTimePoint], totStrand[iTimePoint], siteConserved);
                 }
+//                System.out.println(Arrays.toString(assignment.assign) + "\t" + logFitnessAssign[iAssign]);
                 if (logFitnessAssign[iAssign] > bestAssignVal) {
                     bestAssignVal = logFitnessAssign[iAssign];
                     bestAssign = iAssign;
