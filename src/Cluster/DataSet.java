@@ -21,35 +21,23 @@ import org.apache.commons.math3.special.Gamma;
  * @author rgoldst
  */
 public class DataSet implements MultivariateFunction, UnivariateFunction {
-    
-    Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
     Vector<Site> activeSiteVector = new Vector<>();  // List of sites that are actively considered
-    Vector<Integer> allSiteVector = new Vector<>();// List of all sites 
     Vector<Site> variableSiteVector = new Vector<>(); // List of all variable sites
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;
     int nTimePoints = 0;   // Number of time points
-    
-    int iter = 0;  // Initialise count of iterations   
-    int iStage = 0;
-    int iTimePoint = 0;
-    
+         
     int optType = 0;
-    int optTimePoint = 0;
-    
-    double[][] currentAlphaHap = null;
-    double currentS = 0.0001;
-    double currentAlpha = 0.01;
-    double currentBeta = 1.0;
-    int nQuartiles = 5;
-    double[] quartiles = new double[nQuartiles];
-    
+    int optTimePoint = 0;    
     int iCount = 0;
 
     DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         Vector<String> fileNameVector = new Vector<String>(); // list of files to be read in one for each time point
+        Vector<Integer> allSiteVector = new Vector<>();// List of all sites 
+        Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
+        
         try {
             FileReader file = new FileReader(fileNameFile); 
             BufferedReader buff = new BufferedReader(file);;
@@ -109,26 +97,22 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
                 }
             } 
         }
-        currentAlphaHap = new double[nTimePoints][nHaplo];
     }
     
     double computeTotalLogLikelihood() {
         double totalLogLikelihood = 0.0;
         if (optType == 0) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlpha, currentBeta, currentS);
+                totalLogLikelihood += site.computeSiteLogLikelihood();
             }
             return totalLogLikelihood;
         } else {
             for (Site site : variableSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(optTimePoint);
+                totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint);
             }
             return totalLogLikelihood;            
         }
-    }
-    
-    
-    
+    } 
     
     void setOptType(int optType, int optTimePoint) {
         this.optType = optType;
@@ -137,72 +121,70 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
         iCount = 0;
     }
     
-    
-    
-    
     int getNTimePoints() {
         return nTimePoints;
     }
  
-    void assignHaplotypes(double[][] alphaParams, double[] errorParams) {
-        currentAlpha = errorParams[0];
-        currentBeta = errorParams[1];
-        currentS = errorParams[2];
-        quartiles = setQuartiles(currentAlpha, currentBeta)l
+    void assignHaplotypes(double[][] piParams, double[] alphaParams) {
+        setParams(piParams, alphaParams);
         double totalLogLikelihood = 0.0;
-        setParams(alphaParams, errorParams, quartiles);
         for (Site site : variableSiteVector) {
-           totalLogLikelihood += site.assignHaplotypes(currentAlphaHap, quartiles, currentS);
+           totalLogLikelihood += site.assignHaplotypes();
         }
         System.out.println("zzz\t" + totalLogLikelihood);
     }
     
-    void setParams(double[][] alphaParams, double[] errorParams, double[] quartiles) {
-        currentS = errorParams[1];
+    void setParams(double[][] piParams, double[] alphaParams) {
+        double[][] piHap = computePiHap(piParams);
+        for (Assignment assignment : assignmentVector) {
+            assignment.setParams(piHap, alphaParams);
+        }
+    }
+    
+    double[][] computePiHap(double[][] piParams) {
+        double[][] piHap = new double[nTimePoints][4];
         double[] remaining = new double[nTimePoints];
         Arrays.fill(remaining, 1.0);
         for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                currentAlphaHap[iTimePoint][iHaplo] = remaining[iTimePoint] * alphaParams[iTimePoint][iHaplo];
-                remaining[iTimePoint] -= currentAlphaHap[iTimePoint][iHaplo];
+                piHap[iTimePoint][iHaplo] = remaining[iTimePoint] * piParams[iTimePoint][iHaplo];
+                remaining[iTimePoint] -= piHap[iTimePoint][iHaplo];
             }
         }
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            currentAlphaHap[iTimePoint][nHaplo-1] = remaining[iTimePoint];
+            piHap[iTimePoint][nHaplo-1] = remaining[iTimePoint];
         }
-        for (Assignment assignment : assignmentVector) {
-            assignment.setAlphas(currentAlphaHap, quartiles, currentS);
-        }
-        System.out.println("zzz\t" + Arrays.toString(quartiles) + "\t" + currentS);
-        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            System.out.println("zzz\t" + iTimePoint + "\t" + Arrays.toString(currentAlphaHap[iTimePoint]));
-        }
+        return piHap;
     }
     
-        void setParams(double[] errorParams) {
-        currentAlpha = errorParams[0];
-        currentBeta = errorParams[1];
-        currentS = errorParams[2];
-        for (Assignment assignment : assignmentVector) {
-            assignment.setAlphas(currentAlphaHap, quartiles, currentS);
-        }
-    }
-    
-    void setParams(int iTimePoint, double[] alphaParams) {
+    double[] computePiHap(double[] piParams) {
+        double[] piHap = new double[4];
         double remaining = 1.0;
         for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
-            currentAlphaHap[iTimePoint][iHaplo] = remaining * alphaParams[iHaplo];
-            remaining -= currentAlphaHap[iTimePoint][iHaplo];
+            piHap[iHaplo] = remaining * piParams[iHaplo];
+            remaining -= piHap[iHaplo];
         }
-        currentAlphaHap[iTimePoint][nHaplo-1] = remaining;
+        piHap[nHaplo-1] = remaining;
+        return piHap;
+    }
+    
+    
+    void setAlphaParams(double[] alphaParams) {
         for (Assignment assignment : assignmentVector) {
-            assignment.setAlphas(currentAlphaHap, quartiles, currentS);
+            assignment.setAlphas(alphaParams);
+        }
+    }
+    
+    void setPiHap(int iTimePoint, double[] piParams) {
+        double[] piHap = computePiHap(piParams);
+        for (Assignment assignment : assignmentVector) {
+            assignment.setPiHap(iTimePoint, piHap);
         }
     }
     
     public double value(double[] params) {     
         if (optType == 0) {
-            setParams(params);
+            setAlphaParams(params);
             double val = computeTotalLogLikelihood();
             if (iCount % 10 == 0) {
                 System.out.print("xxx\t" + Arrays.toString(params));
@@ -211,7 +193,7 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
             iCount++;
             return -val;
         } else if (optType == 1) {
-            setParams(optTimePoint, params);
+            setPiHap(optTimePoint, params);
             double val = computeTotalLogLikelihood();
             if (iCount % 10 == 0) {
                 System.out.print("xxx\t" + Arrays.toString(params));
@@ -227,71 +209,9 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
     
     public double value(double singleParam) {  
         double[] params = new double[1];
-        params[0] = singleParam;
-        if (optType == 0) {
-            setParams(params);
-            double val = computeTotalLogLikelihood();
-            if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
-                System.out.println("\t" + val);
-            }
-            iCount++;
-            return -val;
-        } else if (optType == 1) {
-            setParams(optTimePoint, params);
-            double val = computeTotalLogLikelihood();
-            if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
-                System.out.println("\t" + val);
-            }
-            iCount++;
-            return -val;
-        }
-        System.out.println("Error in optimisation");
-        System.exit(1);
-        return 0.0;
+        return value(params);
     }
-    
-    double[] setQuartiles(double alpha, double beta) {
-        double[] quartiles = new double[nQuartiles];
-        double[] boundaries = new double[nQuartiles+1];
-        boundaries[0] = 0.0;
-        boundaries[nQuartiles] = 1.0;
-        for (int iQuart = 1; iQuart < nQuartiles; iQuart++) {
-            double low = boundaries[iQuart-1];
-            double high = 1.0;
-            double val = 1.0*iQuart/nQuartiles;
-            double x = 0.5 * (high + low);
-            double delta = high - low;
-            while (delta > 1.0E-8) {
-                double valAtX = Beta.regularizedBeta(x, alpha, beta);
-                if (valAtX > val) {
-                    high = x;
-                } else {
-                    low = x;
-                }
-                x = 0.5 * (high + low);
-                delta = high - low;
-            }
-            boundaries[iQuart] = x;
-            System.out.println(iQuart + "\t" + boundaries[iQuart] + "\t" + Beta.regularizedBeta(boundaries[iQuart], alpha, beta));
-        }
-        System.out.println();
-        for (int iQuart = 0; iQuart < nQuartiles; iQuart++) {
-            quartiles[iQuart] = Math.exp(Beta.logBeta(1.0 + alpha, beta) - Beta.logBeta(alpha, beta)) 
-                    * (Beta.regularizedBeta(boundaries[iQuart+1], 1+alpha, beta)
-                        - Beta.regularizedBeta(boundaries[iQuart], 1+alpha, beta)) /
-                    (Beta.regularizedBeta(boundaries[iQuart+1], alpha, beta)
-                        - Beta.regularizedBeta(boundaries[iQuart], alpha, beta));
-            System.out.println(iQuart + "\t" + quartiles[iQuart]);
-        }
-        return quartiles;
-    }
-    
-    
-    
-    
-    
+  
 //    void printHaplotypes(double alpha_e, double beta_e, double S, double F0) {
 //        System.out.println("zzz\nzzz\nzzz");
 //        for (int iSite : activeSiteVector) {

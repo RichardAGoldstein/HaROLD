@@ -15,98 +15,104 @@ import org.apache.commons.math3.special.Gamma;
 public class Assignment {
     
     int[] assign = null;
-    boolean[] present = new boolean[4];
+    boolean[] presentBase = new boolean[4];
     int nHaplo = 0;
     int nPresent = 0;
     int nAbsent = 0;
     int nTimePoints = 0;
     
-    double[][] alphaHep = null;
-    double[] quartiles = null;
-    int nQuartiles = 0;
-    double S = 0.0;
-    double[][] alpha_nuc = null;
-    double alpha_C = 0.0;
-    double alpha_E = 0.0;
-    double bEAlpha_E = 0.0;
-    double[] sumAlpha = null;
-    double[][] logGammaAlpha_nuc = null;
-    double[] logGammaSumAlpha = null;
-    double logGammaAlpha_E = 0.0;
-    double logGammaAlpha_C = 0.0;
-    double logGammaSumCPlusE = 0.0;
+    double[][] piHap = null;
+    double[][] piNuc = null;
+    double[][] alphaObs = null;
+    double alpha0 = 0.0;
+    double alphaE = 0.0;
     
     Assignment(int iAssign, int nHaplo) {
         this.nHaplo = nHaplo;
         assign = new int[nHaplo];
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {    // Loop over possible haplotypes
             assign[iHaplo] = (iAssign / pow(Cluster.maxBases, iHaplo)) % (Cluster.maxBases);
-            present[assign[iHaplo]] = true;
+            presentBase[assign[iHaplo]] = true;
         }       
         for (int iBase = 0; iBase < 4; iBase++) {
-            if (present[iBase]) {
+            if (presentBase[iBase]) {
                 nPresent++;
             }
         }
         nAbsent = 4 - nPresent;
     }
     
-    void setAlphas(double[][] alphaHap, double[] quartiles, double S) {
-        this.alphaHep = alphaHep;
-        this.quartiles = quartiles;
-        nQuartiles = quartiles.length;
-        this.S = S;
-        
-        nTimePoints = alphaHap.length;
-        alpha_nuc = new double[nTimePoints][4];       
-        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                alpha_nuc[iTimePoint][assign[iHaplo]] += alphaHap[iTimePoint][iHaplo];
-            }
-        }
+    void setParams(double[][] piHap, double alpha0, double alphaE) {
+        setPiHap(piHap);
+        setAlphas(alpha0, alphaE);
+    }
+
+    void setParams(double[][] piHap, double[] alphaParams) {
+        setPiHap(piHap);
+        setAlphas(alphaParams);
     }
 
     
-    double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
-        double[] logFitness1 = new double[2];
-        double[] logFitness2 = new double[2];
-        logFitness2[0] = Gamma.logGamma(4.0) - Gamma.logGamma(totStrand[0]+4.0);
-        logFitness2[1] = Gamma.logGamma(4.0) - Gamma.logGamma(totStrand[1]+4.0);
-        for (int iBase = 0; iBase < 4; iBase++) {
-            if (reads[iBase] > 0) {
-                double[][] terms = new double[2][nQuartiles];
-                double maxTerm = -1.0E10;
-                for (int iQuartile = 0; iQuartile < nQuartiles; iQuartile++) {
-                    double prob = alpha_nuc[iTimePoint][iBase] + (1.0 - 4.0 * alpha_nuc[iTimePoint][iBase]) * quartiles[iQuartile];
-                    terms[0][iQuartile] = strandReads[0][iBase] * Math.log(prob) - Math.log(1.0*nQuartiles);
-                    terms[1][iQuartile] = strandReads[1][iBase] * Math.log(prob) - Math.log(1.0*nQuartiles);
-                    maxTerm = Math.max(Math.max(maxTerm, terms[0][iQuartile]), terms[1][iQuartile]);
-                }
-                double[] sumTerms = new double[2];
-                for (int iQuartile = 0; iQuartile < nQuartiles; iQuartile++) {
-                    sumTerms[0] += Math.exp(terms[0][iQuartile] - maxTerm);
-                    sumTerms[1] += Math.exp(terms[1][iQuartile] - maxTerm);
-                }    
-                logFitness1[0] += maxTerm + Math.log(sumTerms[0]);
-                logFitness1[1] += maxTerm + Math.log(sumTerms[1]);
-                logFitness2[0] += Gamma.logGamma(strandReads[0][iBase] + 1.0);
-                logFitness2[1] += Gamma.logGamma(strandReads[1][iBase] + 1.0);
+    void setAlphas(double alpha0, double alphaE) {
+        this.alpha0 = alpha0;
+        this.alphaE = alphaE;
+    }
+
+    void setAlphas(double[] alphaParams) {
+        this.alpha0 = alphaParams[0];
+        this.alphaE = alphaParams[1];
+    }
+    
+    void setPiHap(double[][] piHap) {
+        this.piHap = piHap;
+        nTimePoints = piHap.length;
+        piNuc = new double[nTimePoints][4];
+        alphaObs = new double[nTimePoints][4];
+        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                piNuc[iTimePoint][assign[iHaplo]] += piHap[iTimePoint][iHaplo];
+            }
+            for (int iBase = 0; iBase < 4; iBase++) {
+                alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 - (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
             }
         }
-        double logFit11 = logFitness1[0] + logFitness1[1];
-        double logFit12 = logFitness1[0] + logFitness2[1];
-        double logFit21 = logFitness2[0] + logFitness1[1];
-        double logFit22 = logFitness2[0] + logFitness2[1];
-        double logFitnessMax = Math.max(Math.max(logFit11, logFit12), Math.max(logFit21, logFit22));
-        double logFitness = (1.0 - S) * (1.0 - S) * Math.exp(logFit11 - logFitnessMax)
-                            + (1.0 - S) * S * Math.exp(logFit12 - logFitnessMax)
-                            + (1.0 - S) * S * Math.exp(logFit21 - logFitnessMax)
-                            + S * S * Math.exp(logFit22 - logFitnessMax);
-        logFitness = logFitnessMax + Math.log(logFitness);
-//        System.out.println(iTimePoint + "\t" + Arrays.toString(strandReads[0]) + "  " 
-//                + Arrays.toString(strandReads[1]) + "\t" + 
-//                Arrays.toString(assign) + "\t" + Arrays.toString(alpha_nuc[iTimePoint]) + "\t" + logFitness
-//                + "\t" + logFit11 + "  " + logFit12 + "  " + logFit21 + "  " + logFit22);
+    }    
+    
+    
+    void setPiHap(int iTimePoint, double[] piHap) {
+        piNuc = new double[nTimePoints][4];
+        alphaObs = new double[nTimePoints][4];
+        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+            piNuc[iTimePoint][assign[iHaplo]] += piHap[iHaplo];
+        }
+        for (int iBase = 0; iBase < 4; iBase++) {
+            this.piHap[iTimePoint][iBase] = piHap[iBase];
+            alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 - (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
+        }
+    } 
+    
+    double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
+        double[] logLikelihoodStrand = new double[2];
+        if (siteConserved) {
+            for (int iStrand = 0; iStrand < 2; iStrand++) {
+                logLikelihoodStrand[iStrand] = Gamma.logGamma(alpha0 + 3.0 * alphaE)
+                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iStrand])
+                        + Gamma.logGamma(alpha0 + totStrand[iStrand])
+                        - Gamma.logGamma(alpha0);
+            }
+        } else {
+            for (int iStrand = 0; iStrand < 2; iStrand++) {
+                logLikelihoodStrand[iStrand] = Gamma.logGamma(alpha0 + 3.0 * alphaE)
+                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iStrand]);
+                for (int iBase = 0; iBase < 4; iBase++) {
+                    if (strandReads[iStrand][iBase] > 0) {
+                        logLikelihoodStrand[iStrand] += Gamma.logGamma(alphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
+                                - Gamma.logGamma(alphaObs[iTimePoint][iBase]);
+                    }
+                }
+            }          
+        }
+        double logFitness = logLikelihoodStrand[0] + logLikelihoodStrand[1];
         return logFitness;
     }
     
