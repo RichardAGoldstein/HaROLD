@@ -24,6 +24,7 @@ public class Assignment {
     double[][] piHap = null;
     double[][] piNuc = null;
     double[][] alphaObs = null;
+    double[] sumAlphaObs = null;
     double alpha0 = 0.0;
     double alphaE = 0.0;
     
@@ -43,13 +44,13 @@ public class Assignment {
     }
     
     void setParams(double[][] piHap, double alpha0, double alphaE) {
-        setPiHap(piHap);
         setAlphas(alpha0, alphaE);
+        setPiHap(piHap);
     }
 
     void setParams(double[][] piHap, double[] alphaParams) {
-        setPiHap(piHap);
         setAlphas(alphaParams);
+        setPiHap(piHap);
     }
 
     
@@ -65,50 +66,45 @@ public class Assignment {
     
     void setPiHap(double[][] piHap) {
         this.piHap = piHap;
-        nTimePoints = piHap.length;
-        piNuc = new double[nTimePoints][4];
-        alphaObs = new double[nTimePoints][4];
+        this.nTimePoints = piHap.length;
+        this.piNuc = new double[nTimePoints][4];
+        this.alphaObs = new double[nTimePoints][4];
+        this.sumAlphaObs = new double[nTimePoints];
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                piNuc[iTimePoint][assign[iHaplo]] += piHap[iTimePoint][iHaplo];
+                this.piNuc[iTimePoint][assign[iHaplo]] += piHap[iTimePoint][iHaplo];
             }
             for (int iBase = 0; iBase < 4; iBase++) {
-                alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 - (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
+                this.alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 + (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
+                this.sumAlphaObs[iTimePoint] += alphaObs[iTimePoint][iBase];
             }
         }
     }    
     
     
     void setPiHap(int iTimePoint, double[] piHap) {
-        piNuc = new double[nTimePoints][4];
-        alphaObs = new double[nTimePoints][4];
+        this.piNuc = new double[nTimePoints][4];
+        this.alphaObs = new double[nTimePoints][4];
+        this.sumAlphaObs = new double[nTimePoints];
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            piNuc[iTimePoint][assign[iHaplo]] += piHap[iHaplo];
+            this.piNuc[iTimePoint][assign[iHaplo]] += piHap[iHaplo];
         }
         for (int iBase = 0; iBase < 4; iBase++) {
             this.piHap[iTimePoint][iBase] = piHap[iBase];
-            alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 - (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
+            this.alphaObs[iTimePoint][iBase] = piNuc[iTimePoint][iBase] * alpha0 + (1.0 - piNuc[iTimePoint][iBase]) * alphaE;
+            this.sumAlphaObs[iTimePoint] += alphaObs[iTimePoint][iBase];
         }
     } 
     
     double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
         double[] logLikelihoodStrand = new double[2];
-        if (siteConserved) {
-            for (int iStrand = 0; iStrand < 2; iStrand++) {
-                logLikelihoodStrand[iStrand] = Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iStrand])
-                        + Gamma.logGamma(alpha0 + totStrand[iStrand])
-                        - Gamma.logGamma(alpha0);
-            }
-        } else {
-            for (int iStrand = 0; iStrand < 2; iStrand++) {
-                logLikelihoodStrand[iStrand] = Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iStrand]);
-                for (int iBase = 0; iBase < 4; iBase++) {
-                    if (strandReads[iStrand][iBase] > 0) {
-                        logLikelihoodStrand[iStrand] += Gamma.logGamma(alphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
-                                - Gamma.logGamma(alphaObs[iTimePoint][iBase]);
-                    }
+        for (int iStrand = 0; iStrand < 2; iStrand++) {
+            logLikelihoodStrand[iStrand] = Gamma.logGamma(sumAlphaObs[iTimePoint])
+                    - Gamma.logGamma(sumAlphaObs[iTimePoint] + totStrand[iStrand]);
+            for (int iBase = 0; iBase < 4; iBase++) {
+                if (strandReads[iStrand][iBase] > 0) {
+                    logLikelihoodStrand[iStrand] += Gamma.logGamma(alphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
+                            - Gamma.logGamma(alphaObs[iTimePoint][iBase]);
                 }
             }          
         }

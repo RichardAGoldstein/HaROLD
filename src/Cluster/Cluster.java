@@ -76,36 +76,22 @@ public class Cluster {
         double[] currentAlphaParams = {1.0, 0.1};
         double trustRadius = 0.01;
         double[] optPoint = null;
+        double[] lb_alpha = null;
+        double[] ub_alpha = null;
+        MultivariateOptimizer optimize = null;
+        OptimizationData[] parm = null;
         
         for (int iIter = 0; iIter < 10; iIter++) {
             
             dataSet.assignHaplotypes(currentHapParams, currentAlphaParams);  // Find best set of assignments
             
-            dataSet.setOptType(0, 0);      
-            trustRadius = Math.max(1.0E-6, Math.pow(0.1, iIter+2));   // Optimise alpha params
-            double[] lb_alpha = {1.0E-8, 1.0E-8};
-            double[] ub_alpha = {10.0, 5.0};
-            trustRadius = 1.0E-6;
-            MultivariateOptimizer optimize = new BOBYQAOptimizer(2*2,0.01,trustRadius);
-
-            OptimizationData[] parm = new OptimizationData[]{
-                new InitialGuess(currentAlphaParams),
-                new MaxEval(1000000),
-                GoalType.MINIMIZE,
-                new ObjectiveFunction(dataSet),
-                new SimpleBounds(lb_alpha,ub_alpha)};
-            optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-            System.out.println(Arrays.toString(optPoint));
-            currentAlphaParams[0] = optPoint[0];
-            currentAlphaParams[1] = optPoint[1];
-            
             if (nHaplo == 2) {
-                double optSinglePoint = 0.0;
+                double optSinglePoint = 0.5;
                 for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) { 
                     dataSet.setOptType(1, iTimePoint);
                     optSinglePoint = currentHapParams[iTimePoint][0];
                     optSinglePoint = fmin(1.0E-8, 1.0, 1.0E-6);
-                    System.out.println(optSinglePoint);
+                    System.out.println("Optimum piParams\t" + iTimePoint + "\t" + optSinglePoint);
                     currentHapParams[iTimePoint][0] = optSinglePoint; 
                 }
             } else {
@@ -127,13 +113,35 @@ public class Cluster {
                         new ObjectiveFunction(dataSet),
                         new SimpleBounds(lb_alpha,ub_alpha)};
                     optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
-                    System.out.println(Arrays.toString(optPoint));
+                    System.out.println("Optimum piParams\t" + iTimePoint + "\t" + Arrays.toString(optPoint));
                     for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
                         currentHapParams[iTimePoint][iHaplo] = optPoint[iHaplo]; 
                     }
 
                 }
             }
+                   
+            dataSet.setParams(currentHapParams, currentAlphaParams);
+            dataSet.setOptType(0, 0);      
+            lb_alpha = new double[2];
+            lb_alpha[0] = 1.0;
+            lb_alpha[1] = 0.01;
+            ub_alpha = new double[2];
+            ub_alpha[0] = 10.0;
+            ub_alpha[1] = 0.1;
+            trustRadius = 1.0E-6;
+            optimize = new BOBYQAOptimizer(2*2,0.01,trustRadius);
+
+            parm = new OptimizationData[]{
+                new InitialGuess(currentAlphaParams),
+                new MaxEval(1000000),
+                GoalType.MINIMIZE,
+                new ObjectiveFunction(dataSet),
+                new SimpleBounds(lb_alpha,ub_alpha)};
+            optPoint = optimize.optimize(parm).getPoint();  // It will be 'THE BEST'
+            System.out.println("Optimimum alphaParams:\t" + Arrays.toString(optPoint));
+            currentAlphaParams[0] = optPoint[0];
+            currentAlphaParams[1] = optPoint[1];
         }
     }
 

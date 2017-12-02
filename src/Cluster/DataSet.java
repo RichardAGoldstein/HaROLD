@@ -26,6 +26,7 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;
     int nTimePoints = 0;   // Number of time points
+    double[] alphaParams = new double[2];
          
     int optType = 0;
     int optTimePoint = 0;    
@@ -99,16 +100,18 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
         }
     }
     
-    double computeTotalLogLikelihood() {
+    double computeTotalLogLikelihood(double[] alphaParams) {
+        double alpha0 = alphaParams[0];
+        double alphaE = alphaParams[1];
         double totalLogLikelihood = 0.0;
         if (optType == 0) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood();
+                totalLogLikelihood += site.computeSiteLogLikelihood(alpha0, alphaE);
             }
             return totalLogLikelihood;
         } else {
             for (Site site : variableSiteVector) {
-                totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint);
+                totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint, alpha0, alphaE);
             }
             return totalLogLikelihood;            
         }
@@ -129,7 +132,7 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
         setParams(piParams, alphaParams);
         double totalLogLikelihood = 0.0;
         for (Site site : variableSiteVector) {
-           totalLogLikelihood += site.assignHaplotypes();
+            totalLogLikelihood += site.assignHaplotypes();
         }
         System.out.println("zzz\t" + totalLogLikelihood);
     }
@@ -170,6 +173,7 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
     
     
     void setAlphaParams(double[] alphaParams) {
+        this.alphaParams = alphaParams;
         for (Assignment assignment : assignmentVector) {
             assignment.setAlphas(alphaParams);
         }
@@ -185,18 +189,18 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
     public double value(double[] params) {     
         if (optType == 0) {
             setAlphaParams(params);
-            double val = computeTotalLogLikelihood();
+            double val = computeTotalLogLikelihood(params);
             if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
+                System.out.print("yyy\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }
             iCount++;
             return -val;
         } else if (optType == 1) {
             setPiHap(optTimePoint, params);
-            double val = computeTotalLogLikelihood();
+            double val = computeTotalLogLikelihood(alphaParams);
             if (iCount % 10 == 0) {
-                System.out.print("xxx\t" + Arrays.toString(params));
+                System.out.print("xxx\t" + Arrays.toString(alphaParams) + "\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }
             iCount++;
@@ -209,6 +213,7 @@ public class DataSet implements MultivariateFunction, UnivariateFunction {
     
     public double value(double singleParam) {  
         double[] params = new double[1];
+        params[0] = singleParam;
         return value(params);
     }
   

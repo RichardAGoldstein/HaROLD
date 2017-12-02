@@ -114,24 +114,24 @@ public class Site {
     double assignHaplotypes() {
         double logLikelihood = 0.0;
         probAssignment = new double[localAssignmentVector.size()];
-        double[] logFitnessAssign = new double[localAssignmentVector.size()];
+        double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
         double sumProb = 0.0;
         int bestAssign = -999;
         double bestAssignVal = -1.0E20;
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
             Assignment assignment = localAssignmentVector.get(iAssign);
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                logFitnessAssign[iAssign] += 
+                logLikelihoodAssign[iAssign] += 
                         assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
                                 reads[iTimePoint], totStrand[iTimePoint], siteConserved);
             }
-            if (logFitnessAssign[iAssign] > bestAssignVal) {
-                bestAssignVal = logFitnessAssign[iAssign];
+            if (logLikelihoodAssign[iAssign] > bestAssignVal) {
+                bestAssignVal = logLikelihoodAssign[iAssign];
                 bestAssign = iAssign;
             }
         }
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-            probAssignment[iAssign] = Math.exp(logFitnessAssign[iAssign]-bestAssignVal);
+            probAssignment[iAssign] = Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
             sumProb += probAssignment[iAssign];
             logLikelihood += probAssignment[iAssign];
         }
@@ -139,63 +139,93 @@ public class Site {
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
             probAssignment[iAssign] /= sumProb;
         }
+        if (false && Cluster.verbose) {
+            System.out.print(iSite);
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                System.out.print("\t" + Arrays.toString(reads[iTimePoint]));
+            }
+            System.out.println("\t" + Arrays.toString(localAssignmentVector.get(bestAssign).assign) + "\t" + bestAssignVal);
+            
+        }
         return logLikelihood;
     }
     
     
-    double computeSiteLogLikelihood() { 
-        double totalLogFitness = 0.0;
+    double computeSiteLogLikelihood(double alpha0, double alphaE) {
+        double totalLogLikelihood = 0.0; 
+        if (siteConserved) {
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                for (int iStrand = 0; iStrand < 2; iStrand++) {
+                    totalLogLikelihood = Gamma.logGamma(alpha0 + 3.0 * alphaE)
+                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
+                            + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                            - Gamma.logGamma(alpha0);
+                }
+            }
+            return totalLogLikelihood;
+        }
+
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-            double[] logFitnessAssign = new double[localAssignmentVector.size()];
-            double sumFit = 0.0;
+            double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
+            double timePointLogLikelihood = 0.0;
             int bestAssign = -999;
             double bestAssignVal = -1.0E20;
             for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
                 if (probAssignment[iAssign] > 0.001) {
                     Assignment assignment = localAssignmentVector.get(iAssign);
-                        logFitnessAssign[iAssign] += 
-                                assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
-                                        reads[iTimePoint], totStrand[iTimePoint], siteConserved);
-        //                System.out.println(Arrays.toString(assignment.assign) + "\t" + logFitnessAssign[iAssign]);
-                    if (logFitnessAssign[iAssign] > bestAssignVal) {
-                        bestAssignVal = logFitnessAssign[iAssign];
+                    logLikelihoodAssign[iAssign] += 
+                            assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
+                                    reads[iTimePoint], totStrand[iTimePoint], siteConserved);
+                    if (logLikelihoodAssign[iAssign] > bestAssignVal) {
+                        bestAssignVal = logLikelihoodAssign[iAssign];
                         bestAssign = iAssign;
                     }
                 }
             }
             for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-                sumFit += probAssignment[iAssign] * Math.exp(logFitnessAssign[iAssign]-bestAssignVal);
+                if (probAssignment[iAssign] > 0.001) {
+                    timePointLogLikelihood += probAssignment[iAssign] * Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
+                }
             }
-            sumFit = bestAssignVal + Math.log(sumFit);
-            totalLogFitness += sumFit;
+            totalLogLikelihood += bestAssignVal + Math.log(timePointLogLikelihood);
         }
-        return totalLogFitness;
+        return totalLogLikelihood;
     }
     
     
-    double computeSiteTimePointLogLikelihood(int iTimePoint) { 
-        double[] logFitnessAssign = new double[localAssignmentVector.size()];
-        double sumFit = 0.0;
+    double computeSiteTimePointLogLikelihood(int iTimePoint, double alpha0, double alphaE) { 
+        double totalLogLikelihood = 0.0;
+        if (siteConserved) {
+            for (int iStrand = 0; iStrand < 2; iStrand++) {
+                totalLogLikelihood = Gamma.logGamma(alpha0 + 3.0 * alphaE)
+                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
+                        + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                        - Gamma.logGamma(alpha0);
+            }
+            return totalLogLikelihood;
+        }
+        double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
         int bestAssign = -999;
         double bestAssignVal = -1.0E20;
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
             if (probAssignment[iAssign] > 0.001) {
                 Assignment assignment = localAssignmentVector.get(iAssign);
-                    logFitnessAssign[iAssign] += 
+                    logLikelihoodAssign[iAssign] += 
                             assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
                                     reads[iTimePoint], totStrand[iTimePoint], siteConserved);
-    //                System.out.println(Arrays.toString(assignment.assign) + "\t" + logFitnessAssign[iAssign]);
-                if (logFitnessAssign[iAssign] > bestAssignVal) {
-                    bestAssignVal = logFitnessAssign[iAssign];
+                if (logLikelihoodAssign[iAssign] > bestAssignVal) {
+                    bestAssignVal = logLikelihoodAssign[iAssign];
                     bestAssign = iAssign;
                 }
             }
         }
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-            sumFit += probAssignment[iAssign] * Math.exp(logFitnessAssign[iAssign]-bestAssignVal);
+            if (probAssignment[iAssign] > 0.001) {
+                totalLogLikelihood += probAssignment[iAssign] * Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
+            }
         }
-        sumFit = bestAssignVal + Math.log(sumFit);
-        return sumFit;
+        totalLogLikelihood = bestAssignVal + Math.log(totalLogLikelihood);
+        return totalLogLikelihood;
     }
 
 }
