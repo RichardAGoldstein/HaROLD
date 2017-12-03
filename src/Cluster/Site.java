@@ -36,6 +36,7 @@ public class Site {
     
     boolean siteActive = false;
     int nPresentBase = 0;   // number of present bases
+    int conservedBase = -9;
     boolean[] presentBase = new boolean[4];
     boolean siteConserved = false;
     boolean[] timePointConserved = null;
@@ -70,6 +71,7 @@ public class Site {
                 totReads[iTimePoint] += strandReads[iTimePoint][iStrand][iBase];
             }
             if (reads[iTimePoint][iBase] > 0) {
+                conservedBase = iBase;
                 presentBase[iBase] = true;
             }
         }
@@ -111,8 +113,21 @@ public class Site {
         return siteActive;
     }
     
-    double assignHaplotypes() {
+    double assignHaplotypes(double[] alphaParams) {
+        double alpha0 = alphaParams[0];
+        double alphaE = alphaParams[1];
         double logLikelihood = 0.0;
+        if (siteConserved) {
+            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                for (int iStrand = 0; iStrand < 2; iStrand++) {
+                    logLikelihood += Gamma.logGamma(alpha0 + 3.0 * alphaE)
+                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
+                            + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                            - Gamma.logGamma(alpha0);
+                }
+            }
+            return logLikelihood;
+        }
         probAssignment = new double[localAssignmentVector.size()];
         double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
         double sumProb = 0.0;
@@ -151,7 +166,9 @@ public class Site {
     }
     
     
-    double computeSiteLogLikelihood(double alpha0, double alphaE) {
+    double computeSiteLogLikelihood(double[] alphaParams) {
+        double alpha0 = alphaParams[0];
+        double alphaE = alphaParams[1];
         double totalLogLikelihood = 0.0; 
         if (siteConserved) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -193,7 +210,9 @@ public class Site {
     }
     
     
-    double computeSiteTimePointLogLikelihood(int iTimePoint, double alpha0, double alphaE) { 
+    double computeSiteTimePointLogLikelihood(int iTimePoint, double[] alphaParams) {
+        double alpha0 = alphaParams[0];
+        double alphaE = alphaParams[1];
         double totalLogLikelihood = 0.0;
         if (siteConserved) {
             for (int iStrand = 0; iStrand < 2; iStrand++) {
@@ -227,5 +246,24 @@ public class Site {
         totalLogLikelihood = bestAssignVal + Math.log(totalLogLikelihood);
         return totalLogLikelihood;
     }
+    
+    
+    double[][] getProbBase() {
+        double[][] expectedFreq = new double[nHaplo][4];
+        if (siteConserved) {
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                expectedFreq[iHaplo][conservedBase] = 1.0;
+            }
+        } else {
+            for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
+                Assignment assignment = localAssignmentVector.get(iAssign);
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    expectedFreq[iHaplo][assignment.assign[iHaplo]] += probAssignment[iAssign];
+                }
+            }
+        }
+        return expectedFreq;
+    }
+
 
 }
