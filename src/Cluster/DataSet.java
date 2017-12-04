@@ -21,14 +21,15 @@ import org.apache.commons.math3.analysis.MultivariateFunction;
 public class DataSet implements MultivariateFunction {
     Vector<Site> activeSiteVector = new Vector<>();  // List of sites that are actively considered
     Vector<Site> variableSiteVector = new Vector<>(); // List of all variable sites
-    Vector<Site> reducedSiteVector = new Vector<>();  
+    Vector<Site> reducedSiteVector0 = new Vector<>();  
+    Vector<Site> reducedSiteVector1 = new Vector<>();  
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;   // Vectir if assignments
     int nTimePoints = 0;   // Number of time points
-    double[] currentAlphaParams = new double[2];   // alpha0 and alphaE
+    double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
     double[][] currentPiHap = null;
-    double useFrac = 1.0;
-    boolean firstRound = true;
+    double[] useFrac = {0.01, 0.1};
+    int iIter = 0;
          
     String[] baseString = {"A", "C", "G", "T"};
         
@@ -38,7 +39,7 @@ public class DataSet implements MultivariateFunction {
     
     double currentLogLikelihood = 0.0;
 
-    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, double useFrac) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, double[] useFrac) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.useFrac = useFrac;
@@ -100,8 +101,11 @@ public class DataSet implements MultivariateFunction {
             Site site = siteHash.get(iSite);
             if (site.isActive()) {    // do simple sums
                 activeSiteVector.add(site);
-                if (Cluster.random.nextDouble() < useFrac) {
-                    reducedSiteVector.add(site);
+                if (Cluster.random.nextDouble() < useFrac[0]) {
+                    reducedSiteVector0.add(site);
+                }
+                if (Cluster.random.nextDouble() < useFrac[1]) {
+                    reducedSiteVector1.add(site);
                 }
                 if (!site.siteConserved) {
                     variableSiteVector.add(site);
@@ -112,13 +116,19 @@ public class DataSet implements MultivariateFunction {
     
     double computeTotalLogLikelihood() {
         double totalLogLikelihood = 0.0;
-        if (optType == 0 && (!firstRound || useFrac > 0.99999)) {
-            for (Site site : activeSiteVector) {
+        if (optType == 0 && iIter == 0 && useFrac[0] < 0.99999) {
+            for (Site site : reducedSiteVector0) {
                 totalLogLikelihood += site.assignHaplotypes(currentAlphaParams);
             }
             return totalLogLikelihood;
+        } else if (optType == 0 && iIter == 1 && useFrac[1] < 0.99999) {
+            for (Site site : reducedSiteVector1) {
+                totalLogLikelihood += site.assignHaplotypes(currentAlphaParams);
+            }
+            return totalLogLikelihood;
+            
         } else if (optType == 0) {
-            for (Site site : reducedSiteVector) {
+            for (Site site : activeSiteVector) {
                 totalLogLikelihood += site.assignHaplotypes(currentAlphaParams);
             }
             return totalLogLikelihood;
@@ -130,10 +140,10 @@ public class DataSet implements MultivariateFunction {
         }
     } 
     
-    void setOptType(int optType, int optTimePoint, double[][] hapParams, double[] alphaParams, boolean firstRound) {
+    void setOptType(int optType, int optTimePoint, double[][] hapParams, double[] alphaParams, int iIter) {
         this.optType = optType;
         this.optTimePoint = optTimePoint;
-        this.firstRound = firstRound;
+        this.iIter = iIter;
         updateAllParams(hapParams, alphaParams);
         System.out.println(optType + "\t" + optTimePoint);
         iCount = 0;
