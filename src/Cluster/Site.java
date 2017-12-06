@@ -204,7 +204,7 @@ public class Site {
             int bestAssign = -999;
             double bestAssignVal = -1.0E20;
             for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-                if (probAssignment[iAssign] > 0.001) {
+                if (probAssignment[iAssign] > 0.01) {
                     Assignment assignment = localAssignmentVector.get(iAssign);
                     logLikelihoodAssign[iAssign] += priorProb[assignToPrior[iAssign]]
                             + assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
@@ -216,10 +216,11 @@ public class Site {
                 }
             }
             for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-                if (probAssignment[iAssign] > 0.001) {
+                if (probAssignment[iAssign] > 0.01) {
                     timePointLogLikelihood += probAssignment[iAssign] * Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
                 }
             }
+            
             totalLogLikelihood += bestAssignVal + Math.log(timePointLogLikelihood);
         }
         return totalLogLikelihood;
@@ -240,13 +241,14 @@ public class Site {
                         + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
                         - Gamma.logGamma(alpha0);
             }
+            if (iSite == 1372) System.out.println(iSite + "\t" + siteConserved + "\t" + totalLogLikelihood);
             return totalLogLikelihood;
         }
         double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
         int bestAssign = -999;
         double bestAssignVal = -1.0E20;
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-            if (probAssignment[iAssign] > 0.001) {
+            if (probAssignment[iAssign] > 0.01) {
                 Assignment assignment = localAssignmentVector.get(iAssign);
                     logLikelihoodAssign[iAssign] += priorProb[assignToPrior[iAssign]]
                             + assignment.computeAssignmentLogLikelihood(iTimePoint, strandReads[iTimePoint], 
@@ -258,7 +260,7 @@ public class Site {
             }
         }
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
-            if (probAssignment[iAssign] > 0.001) {
+            if (probAssignment[iAssign] > 0.01) {
                 totalLogLikelihood += probAssignment[iAssign] * Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
             }
         }
