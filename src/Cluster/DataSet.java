@@ -82,12 +82,20 @@ public class DataSet implements MultivariateFunction {
                             line = buff.readLine();
                         }
                         int iSite = Integer.parseInt(line.split(",")[0]);
+//                        
+//                        if ((iSite >= 78194 && iSite <= 81922) || (iSite >= 141798 && iSite <= 143921)) {
+//                        
+                        
                         if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
                             siteHash.put(iSite, newSite);
                         }
                         siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site
+//                        
+//                        }
+//                        
+                        
                     }
                 }
             }     
@@ -300,7 +308,7 @@ public class DataSet implements MultivariateFunction {
             }
         }
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            System.out.print("Haplo_" + iHaplo + "\t");
+            System.out.print(">Haplo_UL54_" + iHaplo + "\n");
 //            for (int iSite = 0; iSite < nSites; iSite++) {
             for (int iSite = 78194; iSite <= 81922; iSite++) {
                 System.out.print(baseString[bestBase[iHaplo][iSite]]);              
@@ -309,13 +317,21 @@ public class DataSet implements MultivariateFunction {
         }
         System.out.println();
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            System.out.print("Haplo_" + iHaplo + "\t");
+            System.out.print(">Haplo_UL97_" + iHaplo + "\n");
 //            for (int iSite = 0; iSite < nSites; iSite++) {
             for (int iSite = 141798; iSite <= 143921; iSite++) {
                 System.out.print(baseString[bestBase[iHaplo][iSite]]);              
             }
             System.out.println();
         }
+        
+        
+        
+        
+        if (false) {
+            
+            
+            
         for (Site site : variableSiteVector) {
             int iSite = site.iSite;
             System.out.print(iSite);
@@ -330,6 +346,11 @@ public class DataSet implements MultivariateFunction {
             }
             System.out.println();
         }
+        
+        }
+        
+        
+        
     }
     
 
