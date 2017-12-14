@@ -82,20 +82,12 @@ public class DataSet implements MultivariateFunction {
                             line = buff.readLine();
                         }
                         int iSite = Integer.parseInt(line.split(",")[0]);
-//                        
-//                        if ((iSite >= 78194 && iSite <= 81922) || (iSite >= 141798 && iSite <= 143921)) {
-//                        
-                        
                         if (!allSiteVector.contains(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
                             siteHash.put(iSite, newSite);
                         }
                         siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site
-//                        
-//                        }
-//                        
-                        
                     }
                 }
             }     
@@ -260,10 +252,11 @@ public class DataSet implements MultivariateFunction {
   
     void printResults() {
         System.out.println("\n\n\nResults for nHaplotypes = " + nHaplo);
-        int nParams = 2 + (nHaplo-1)*nTimePoints;
+        int nParams = 3 + (nHaplo-1)*nTimePoints;
         System.out.println("Number of adjustable parameters: " + nParams);
         System.out.println("Final likelihood: " + currentLogLikelihood);
-        System.out.println("Dirichlet parameters for errors: " + currentAlphaParams[0] + "\t" + currentAlphaParams[1]);
+        System.out.println("Dirichlet parameters for errors: " + currentAlphaParams[0] + "\t" + currentAlphaParams[1]
+            + "\t" + currentAlphaParams[2]);
         System.out.println("Error rate: " + (currentAlphaParams[1]/(currentAlphaParams[0]+currentAlphaParams[1])));
         System.out.println("Haplotype frequencies");
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -273,80 +266,72 @@ public class DataSet implements MultivariateFunction {
             }
             System.out.println();
         }
-        System.out.println("Haplotypes");
-        int nSites = activeSiteVector.size();
-        nSites = activeSiteVector.get(activeSiteVector.size() - 1).iSite + 1;
-        for (Site site : activeSiteVector) {
-            nSites = Math.max(nSites, site.iSite+1);
-        }
-        System.out.println(nSites);
-        int[][] bestBase = new int[nHaplo][nSites];
-        double[][] probBestBase = new double[nHaplo][nSites];
-        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            for (int iSite = 0; iSite < nSites; iSite++) {
-                bestBase[iHaplo][iSite] = 5;
+        
+        if (false) {
+            System.out.println("Haplotypes");
+            int nSites = 0;
+            for (Site site : activeSiteVector) {
+                nSites = Math.max(nSites, site.iSite+1);
             }
-        }
-
-        for (Site site : activeSiteVector) {
-            int iSite = site.iSite;
-            if (site.siteConserved) {
-                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                    bestBase[iHaplo][iSite] = site.conservedBase;
-                    probBestBase[iHaplo][iSite] = 1.0;
+            int[][] bestBase = new int[nHaplo][nSites];
+            double[][] probBestBase = new double[nHaplo][nSites];
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                for (int iSite = 0; iSite < nSites; iSite++) {
+                    bestBase[iHaplo][iSite] = 5;
                 }
-            } else {
-                double[][] probBase = site.getProbBase();
-                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                    for (int iBase = 0; iBase < 4; iBase++) {
-                        if (probBase[iHaplo][iBase] > probBestBase[iHaplo][iSite]) {
-                            probBestBase[iHaplo][iSite] = probBase[iHaplo][iBase];
-                            bestBase[iHaplo][iSite] = iBase;
+            }
+
+            for (Site site : activeSiteVector) {
+                int iSite = site.iSite;
+                if (site.siteConserved) {
+                    for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                        bestBase[iHaplo][iSite] = site.conservedBase;
+                        probBestBase[iHaplo][iSite] = 1.0;
+                    }
+                } else {
+                    double[][] probBase = site.getProbBase();
+                    for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                        for (int iBase = 0; iBase < 4; iBase++) {
+                            if (probBase[iHaplo][iBase] > probBestBase[iHaplo][iSite]) {
+                                probBestBase[iHaplo][iSite] = probBase[iHaplo][iBase];
+                                bestBase[iHaplo][iSite] = iBase;
+                            }
                         }
                     }
                 }
             }
-        }
-        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            System.out.print(">Haplo_UL54_" + iHaplo + "\n");
-//            for (int iSite = 0; iSite < nSites; iSite++) {
-            for (int iSite = 78194; iSite <= 81922; iSite++) {
-                System.out.print(baseString[bestBase[iHaplo][iSite]]);              
-            }
-            System.out.println();
-        }
-        System.out.println();
-        for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-            System.out.print(">Haplo_UL97_" + iHaplo + "\n");
-//            for (int iSite = 0; iSite < nSites; iSite++) {
-            for (int iSite = 141798; iSite <= 143921; iSite++) {
-                System.out.print(baseString[bestBase[iHaplo][iSite]]);              
-            }
-            System.out.println();
-        }
-        
-        
-        
-        
-        if (false) {
-            
-            
-            
-        for (Site site : variableSiteVector) {
-            int iSite = site.iSite;
-            System.out.print(iSite);
-            for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                System.out.print("\t" + Arrays.toString(site.reads[iTimePoint]));
-            }
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                System.out.print("\t" + baseString[bestBase[iHaplo][iSite]]);              
-            }
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                System.out.format("\t%6.4f", probBestBase[iHaplo][iSite]);              
+                System.out.print(">Haplo_UL54_" + iHaplo + "\n");
+    //            for (int iSite = 0; iSite < nSites; iSite++) {
+                for (int iSite = 78194; iSite <= 81922; iSite++) {
+                    System.out.print(baseString[bestBase[iHaplo][iSite]]);              
+                }
+                System.out.println();
             }
             System.out.println();
-        }
-        
+            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                System.out.print(">Haplo_UL97_" + iHaplo + "\n");
+    //            for (int iSite = 0; iSite < nSites; iSite++) {
+                for (int iSite = 141798; iSite <= 143921; iSite++) {
+                    System.out.print(baseString[bestBase[iHaplo][iSite]]);              
+                }
+                System.out.println();
+            }
+
+            for (Site site : variableSiteVector) {
+                int iSite = site.iSite;
+                System.out.print(iSite);
+                for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                    System.out.print("\t" + Arrays.toString(site.reads[iTimePoint]));
+                }
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    System.out.print("\t" + baseString[bestBase[iHaplo][iSite]]);              
+                }
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    System.out.format("\t%6.4f", probBestBase[iHaplo][iSite]);              
+                }
+                System.out.println();
+            }
         }
         
         

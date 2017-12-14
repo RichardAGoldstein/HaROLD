@@ -32,7 +32,7 @@ public class Cluster {
     int maxIter = 10; // Maximium rounds of optimisation
     double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
     boolean optimiseAlpha = true;
-    double[] initialAlphaParams = {100.0, 0.2};
+    double[] initialAlphaParams = {100.0, 0.2, 0.9};
     
     double finalLogLikelihood = 0.0;
 
@@ -53,9 +53,10 @@ public class Cluster {
             System.out.println("Second argument is number of haplotypes");
             System.exit(1);
         }
-        if (args.length == 4) {
+        if (args.length == 5) {
             initialAlphaParams[0] = Double.parseDouble(args[2]);
             initialAlphaParams[1] = Double.parseDouble(args[3]);
+            initialAlphaParams[2] = Double.parseDouble(args[4]);
             optimiseAlpha = false;
         }
         nHaplo = Integer.parseInt(args[1]);  // Update number of haplotypes
@@ -71,7 +72,7 @@ public class Cluster {
     */   
     void run() {
         double[][] currentHapParams = initialiseHapParams();  // Start with initial nearly equal haplotype frequencies
-        double[] currentAlphaParams = Arrays.copyOf(initialAlphaParams, 2);   // Initial values for alpha parameters alpha0 and alphaE
+        double[] currentAlphaParams = Arrays.copyOf(initialAlphaParams, 3);   // Initial values for alpha parameters alpha0 and alphaE
         double[] optPoint = null;    // Array for parameters
         double[] lb_alpha = null;    // Array for lower bounds
         double[] ub_alpha = null;    // Array for upper bounds
@@ -130,13 +131,15 @@ public class Cluster {
 
                 if (optimiseAlpha) {
                     dataSet.setOptType(0, 0, currentHapParams, currentAlphaParams, iIter);   // Instruct dataSet to optimise alpha0 and alphaE   
-                    lb_alpha = new double[2];
+                    lb_alpha = new double[3];
                     lb_alpha[0] = 0.1;      // lower bound of alpha0
                     lb_alpha[1] = 0.0001;   // lower bound of alphaE
-                    ub_alpha = new double[2];  
+                    lb_alpha[2] = 0.01;     // lower bound of f
+                    ub_alpha = new double[3];  
                     ub_alpha[0] = 1000.0;  // upper bound of alpha0
                     ub_alpha[1] = 10.0;    // upper bound of alphaE
-                    optimize = new BOBYQAOptimizer(2*2,0.01,1.0E-6);
+                    ub_alpha[2] = 0.999;     // upper bound of f
+                    optimize = new BOBYQAOptimizer(2*3,0.01,1.0E-6);
 
                     parm = new OptimizationData[]{
                         new InitialGuess(currentAlphaParams),
@@ -150,6 +153,7 @@ public class Cluster {
                     }
                     currentAlphaParams[0] = optPoint[0];  // Update parameters
                     currentAlphaParams[1] = optPoint[1];
+                    currentAlphaParams[2] = optPoint[2];
                 }
                 
                 iIter++;
