@@ -138,7 +138,7 @@ public class Cluster {
                     ub_alpha = new double[3];  
                     ub_alpha[0] = 1000.0;  // upper bound of alpha0
                     ub_alpha[1] = 10.0;    // upper bound of alphaE
-                    ub_alpha[2] = 0.9;     // upper bound of f
+                    ub_alpha[2] = 0.999;     // upper bound of f
                     optimize = new BOBYQAOptimizer(2*3,0.01,1.0E-6);
 
                     parm = new OptimizationData[]{
