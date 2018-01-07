@@ -30,6 +30,7 @@ public class DataSet implements MultivariateFunction {
     double[][] currentPiHap = null;
     double[] useFrac = {0.01, 0.1};
     int iIter = 0;
+    double fracConserved = 0.9504;
          
     String[] baseString = {"A", "C", "G", "T", " ", "-"};
         
@@ -118,28 +119,29 @@ public class DataSet implements MultivariateFunction {
         double totalLogLikelihood = 0.0;
         if (optType == 0 && iIter == 0 && useFrac[0] < 0.99999) {
             for (Site site : reducedSiteVector0) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
             }
             return totalLogLikelihood;
         } else if (optType == 0 && iIter > 0 && useFrac[1] < 0.99999) {
             for (Site site : reducedSiteVector1) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
             }
             return totalLogLikelihood;
             
         } else if (optType == 0) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
             }
             return totalLogLikelihood;
         } else if (optType == 1) {
             for (Site site : variableSiteVector) {
-                totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint, currentAlphaParams);
+                totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint, 
+                        currentAlphaParams, fracConserved);
             }
             return totalLogLikelihood;            
         } else if (optType == 2) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
             }
             return totalLogLikelihood;            
         }
@@ -151,7 +153,7 @@ public class DataSet implements MultivariateFunction {
         this.optTimePoint = optTimePoint;
         this.iIter = iIter;
         updateAllParams(hapParams, alphaParams);
-        System.out.println(iIter + "\t" + optType + "\t" + optTimePoint);
+        System.out.println("ggg\t" + iIter + "\t" + optType + "\t" + optTimePoint);
         iCount = 0;
     }
  
@@ -165,7 +167,7 @@ public class DataSet implements MultivariateFunction {
         }
         currentLogLikelihood = 0.0;
         for (Site site : activeSiteVector) {
-            currentLogLikelihood += site.assignHaplotypes(currentAlphaParams);
+            currentLogLikelihood += site.assignHaplotypes(currentAlphaParams, fracConserved);
         }
         System.out.println("zzz\t" + currentLogLikelihood);
         return currentLogLikelihood;
@@ -181,6 +183,27 @@ public class DataSet implements MultivariateFunction {
         for (Assignment assignment : assignmentVector) {
             assignment.setAllParams(currentPiHap, currentAlphaParams);
         }
+    }
+    
+    void updateFracConserved() {
+        double[] count = new double[5];
+        for (Site site : activeSiteVector) {
+            int iSite = site.iSite;
+            if (site.siteConserved) {
+                count[1]++;
+            } else {
+                for (int nBase = 1; nBase < 5; nBase++) {
+                    count[nBase] += site.estProbDiffBases[nBase];
+                }
+            }
+        }
+        System.out.print("hhh");
+        for (int iCount = 1; iCount < 5; iCount++) {
+            System.out.print("\t" + (count[iCount]/activeSiteVector.size()));
+        }     
+        System.out.println();
+        fracConserved = count[1]/activeSiteVector.size();
+//        fracConserved = 0.95;
     }
     
     /**
@@ -256,7 +279,7 @@ public class DataSet implements MultivariateFunction {
         System.out.println("Number of adjustable parameters: " + nParams);
         System.out.println("Final likelihood: " + currentLogLikelihood);
         System.out.println("Dirichlet parameters for errors: " + currentAlphaParams[0] + "\t" + currentAlphaParams[1]
-            + "\t" + currentAlphaParams[2]);
+            + "\t" + fracConserved);
         System.out.println("Error rate: " + (currentAlphaParams[1]/(currentAlphaParams[0]+currentAlphaParams[1])));
         System.out.println("Haplotype frequencies");
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -300,22 +323,14 @@ public class DataSet implements MultivariateFunction {
                     }
                 }
             }
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                System.out.print(">Haplo_UL54_" + iHaplo + "\n");
-    //            for (int iSite = 0; iSite < nSites; iSite++) {
-                for (int iSite = 78194; iSite <= 81922; iSite++) {
-                    System.out.print(baseString[bestBase[iHaplo][iSite]]);              
+            if (false) {
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    System.out.println(">Haplo_" + iHaplo);
+                    for (int iSite = 0; iSite < nSites; iSite++) {
+                        System.out.print(baseString[bestBase[iHaplo][iSite]]);              
+                    }
+                    System.out.println();
                 }
-                System.out.println();
-            }
-            System.out.println();
-            for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
-                System.out.print(">Haplo_UL97_" + iHaplo + "\n");
-    //            for (int iSite = 0; iSite < nSites; iSite++) {
-                for (int iSite = 141798; iSite <= 143921; iSite++) {
-                    System.out.print(baseString[bestBase[iHaplo][iSite]]);              
-                }
-                System.out.println();
             }
 
             for (Site site : variableSiteVector) {

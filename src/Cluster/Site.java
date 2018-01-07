@@ -27,6 +27,7 @@ public class Site {
     int[] assignToPrior = null;
     int nAssignments = 0;
     String[] baseString = {"A", "C", "G", "T"};
+    double[] estProbDiffBases = new double[5];
     
     
     int[][][] strandReads = null; // [tp][strand][base] top two sets of reads on each strand
@@ -123,12 +124,12 @@ public class Site {
         return siteActive;
     }
     
-    double assignHaplotypes(double[] alphaParams) {
+    double assignHaplotypes(double[] alphaParams, double fracConserved) {
         double alpha0 = alphaParams[0];
         double alphaE = alphaParams[1];
-        double fracConserved = alphaParams[2];
         priorProb[0] = Math.log(fracConserved/4.0);
         priorProb[1] = Math.log((1.0-fracConserved)/(nAssignments - 4.0));
+        estProbDiffBases = new double[5];
         double logLikelihood = 0.0;
         if (siteConserved) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -139,6 +140,7 @@ public class Site {
                             - Gamma.logGamma(alpha0);
                 }
             }
+            estProbDiffBases[1] = 1.0;
             return logLikelihood;
         }
         probAssignment = new double[localAssignmentVector.size()];
@@ -162,10 +164,18 @@ public class Site {
             probAssignment[iAssign] = Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
             sumProb += probAssignment[iAssign];
             logLikelihood += probAssignment[iAssign];
+            double nContrib = Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal 
+                    - priorProb[assignToPrior[iAssign]] + priorProb[assignToPrior[bestAssign]]);
+            estProbDiffBases[localAssignmentVector.get(iAssign).nPresent] 
+                    += nContrib;
+            estProbDiffBases[0] += nContrib;
         }
         logLikelihood = bestAssignVal + Math.log(logLikelihood);
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
             probAssignment[iAssign] /= sumProb;
+        }
+        for (int nBase = 1; nBase < 5; nBase++) {
+            estProbDiffBases[nBase] /= estProbDiffBases[0];
         }
         if (false && Cluster.verbose) {
             System.out.print(iSite);
@@ -179,10 +189,9 @@ public class Site {
     }
     
     
-    double computeSiteLogLikelihood(double[] alphaParams) {
+    double computeSiteLogLikelihood(double[] alphaParams, double fracConserved) {
         double alpha0 = alphaParams[0];
         double alphaE = alphaParams[1];
-        double fracConserved = alphaParams[2];
         priorProb[0] = Math.log(fracConserved/4.0);
         priorProb[1] = Math.log((1.0-fracConserved)/(nAssignments - 4.0));
         double totalLogLikelihood = 0.0; 
@@ -227,10 +236,9 @@ public class Site {
     }
     
     
-    double computeSiteTimePointLogLikelihood(int iTimePoint, double[] alphaParams) {
+    double computeSiteTimePointLogLikelihood(int iTimePoint, double[] alphaParams, double fracConserved) {
         double alpha0 = alphaParams[0];
         double alphaE = alphaParams[1];
-        double fracConserved = alphaParams[2];
         priorProb[0] = Math.log(fracConserved/4.0);
         priorProb[1] = Math.log((1.0-fracConserved)/(nAssignments - 4.0));
         double totalLogLikelihood = 0.0;
@@ -241,7 +249,6 @@ public class Site {
                         + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
                         - Gamma.logGamma(alpha0);
             }
-            if (iSite == 1372) System.out.println(iSite + "\t" + siteConserved + "\t" + totalLogLikelihood);
             return totalLogLikelihood;
         }
         double[] logLikelihoodAssign = new double[localAssignmentVector.size()];
