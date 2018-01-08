@@ -25,12 +25,13 @@ public class DataSet implements MultivariateFunction {
     Vector<Site> reducedSiteVector1 = new Vector<>();  
     int nHaplo = 3; // Number of haplotypes
     Vector<Assignment> assignmentVector = null;   // Vectir if assignments
+    int[] nAssignDiffBases = null;
     int nTimePoints = 0;   // Number of time points
     double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
     double[][] currentPiHap = null;
-    double[] useFrac = {0.01, 0.1};
+    double[] useFrac = {1.0, 1.0};
     int iIter = 0;
-    double fracConserved = 0.9504;
+    double[] priors = new double[5];
          
     String[] baseString = {"A", "C", "G", "T", " ", "-"};
         
@@ -40,14 +41,20 @@ public class DataSet implements MultivariateFunction {
     
     double currentLogLikelihood = 0.0;
 
-    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, double[] useFrac) {  // Read in data
+    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, 
+            int[] nAssignDiffBases, double[] useFrac) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.useFrac = useFrac;
+        this.nAssignDiffBases = nAssignDiffBases;
         Vector<String> fileNameVector = new Vector<String>(); // list of files to be read in one for each time point
         Vector<Integer> allSiteVector = new Vector<>();// List of all sites 
         Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
-        
+        priors[1] = Math.log(0.9 / (nAssignDiffBases[1]+1.0E-20));
+        priors[2] = Math.log(0.07 / (nAssignDiffBases[2]+1.0E-20));
+        priors[3] = Math.log(0.02 / (nAssignDiffBases[3]+1.0E-20));
+        priors[4] = Math.log(0.01 / (nAssignDiffBases[4]+1.0E-20));
+
         try {
             FileReader file = new FileReader(fileNameFile); 
             BufferedReader buff = new BufferedReader(file);;
@@ -119,29 +126,29 @@ public class DataSet implements MultivariateFunction {
         double totalLogLikelihood = 0.0;
         if (optType == 0 && iIter == 0 && useFrac[0] < 0.99999) {
             for (Site site : reducedSiteVector0) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, priors);
             }
             return totalLogLikelihood;
         } else if (optType == 0 && iIter > 0 && useFrac[1] < 0.99999) {
             for (Site site : reducedSiteVector1) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, priors);
             }
             return totalLogLikelihood;
             
         } else if (optType == 0) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, priors);
             }
             return totalLogLikelihood;
         } else if (optType == 1) {
             for (Site site : variableSiteVector) {
                 totalLogLikelihood += site.computeSiteTimePointLogLikelihood(optTimePoint, 
-                        currentAlphaParams, fracConserved);
+                        currentAlphaParams, priors);
             }
             return totalLogLikelihood;            
         } else if (optType == 2) {
             for (Site site : activeSiteVector) {
-                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, fracConserved);
+                totalLogLikelihood += site.computeSiteLogLikelihood(currentAlphaParams, priors);
             }
             return totalLogLikelihood;            
         }
@@ -167,7 +174,7 @@ public class DataSet implements MultivariateFunction {
         }
         currentLogLikelihood = 0.0;
         for (Site site : activeSiteVector) {
-            currentLogLikelihood += site.assignHaplotypes(currentAlphaParams, fracConserved);
+            currentLogLikelihood += site.assignHaplotypes(currentAlphaParams, priors);
         }
         System.out.println("zzz\t" + currentLogLikelihood);
         return currentLogLikelihood;
@@ -199,11 +206,11 @@ public class DataSet implements MultivariateFunction {
         }
         System.out.print("hhh");
         for (int iCount = 1; iCount < 5; iCount++) {
-            System.out.print("\t" + (count[iCount]/activeSiteVector.size()));
+            priors[iCount] = Math.log((count[iCount]/(activeSiteVector.size() 
+                    * (nAssignDiffBases[iCount]+1.0E-20))));
+            System.out.print("\t" + Math.exp(priors[iCount]));
         }     
         System.out.println();
-        fracConserved = count[1]/activeSiteVector.size();
-//        fracConserved = 0.95;
     }
     
     /**
@@ -279,7 +286,10 @@ public class DataSet implements MultivariateFunction {
         System.out.println("Number of adjustable parameters: " + nParams);
         System.out.println("Final likelihood: " + currentLogLikelihood);
         System.out.println("Dirichlet parameters for errors: " + currentAlphaParams[0] + "\t" + currentAlphaParams[1]
-            + "\t" + fracConserved);
+                + "\t" + (nAssignDiffBases[1] * Math.exp(priors[1])) 
+                + "\t" + (nAssignDiffBases[2] * Math.exp(priors[2]))
+                + "\t" + (nAssignDiffBases[3] * Math.exp(priors[3]))
+                + "\t" + (nAssignDiffBases[4] * Math.exp(priors[4])) );
         System.out.println("Error rate: " + (currentAlphaParams[1]/(currentAlphaParams[0]+currentAlphaParams[1])));
         System.out.println("Haplotype frequencies");
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {

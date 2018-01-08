@@ -22,6 +22,7 @@ public class Cluster {
     int nTimePoints = 0;  // Number of timepoints, revised based on data
     
     Vector<Assignment> assignmentVector = new Vector<>();  // Vector of all possible assignments
+    int[] nAssignDiffBases = new int[5]; // Number of assignments with a given number of bases
     DataSet dataSet = null;  // Class for holding and manipulating sequence data
     static Random random = new Random(435027);  
     
@@ -60,7 +61,7 @@ public class Cluster {
         }
         nHaplo = Integer.parseInt(args[1]);  // Update number of haplotypes
         constructAssignments();  // Construct possible assignments of bases to haplotypes
-        dataSet = new DataSet(args[0], nHaplo, assignmentVector, useFrac); // Construct dataset
+        dataSet = new DataSet(args[0], nHaplo, assignmentVector, nAssignDiffBases, useFrac); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
     
@@ -173,7 +174,8 @@ public class Cluster {
         int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
         for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
             Assignment newAssignment = new Assignment(iAssign, nHaplo);
-            assignmentVector.add(newAssignment);      
+            assignmentVector.add(newAssignment);
+            nAssignDiffBases[newAssignment.nPresent]++;
         } 
     }
     
