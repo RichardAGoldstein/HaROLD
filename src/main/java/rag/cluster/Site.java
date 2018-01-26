@@ -5,8 +5,8 @@
  */
 package rag.cluster;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Vector;
 import org.apache.commons.math3.special.Gamma;
 
 
@@ -20,8 +20,8 @@ public class Site {
     int nTimePoints;
     int nHaplo = 0;
     int nBases = 0;
-    Vector<Assignment> assignmentVector = null;
-    Vector<Assignment> localAssignmentVector = new Vector<>();
+    ArrayList<Assignment> assignmentVector;
+    ArrayList<Assignment> localAssignmentVector = new ArrayList<>();
     double[] probAssignment = null;
     double[] priorProb = new double[2];
     int nAssignments = 0;
@@ -44,7 +44,7 @@ public class Site {
     boolean[] timePointConserved = null;
     boolean[] timePointHasData = null;
     
-    Site(int iSite, int nTimePoints, int nHaplo, Vector<Assignment> assignmentVector) {
+    Site(int iSite, int nTimePoints, int nHaplo, ArrayList<Assignment> assignmentVector) {
         this.iSite = iSite;
         this.nTimePoints = nTimePoints;
         this.nHaplo = nHaplo;
@@ -185,10 +185,11 @@ public class Site {
         double totalLogLikelihood = 0.0; 
         if (siteConserved) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                int[] thisStrand = totStrand[iTimePoint];
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
                     totalLogLikelihood += priors[1] + Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
-                            + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + thisStrand[iStrand])
+                            + Gamma.logGamma(alpha0 + thisStrand[iStrand])
                             - Gamma.logGamma(alpha0);
                 }
             }

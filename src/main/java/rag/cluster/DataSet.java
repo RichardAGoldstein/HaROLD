@@ -8,9 +8,10 @@ package rag.cluster;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Vector;
 import org.apache.commons.math3.analysis.MultivariateFunction;
 
 
@@ -19,12 +20,12 @@ import org.apache.commons.math3.analysis.MultivariateFunction;
  * @author rgoldst
  */
 public class DataSet implements MultivariateFunction {
-    Vector<Site> activeSiteVector = new Vector<>();  // List of sites that are actively considered
-    Vector<Site> variableSiteVector = new Vector<>(); // List of all variable sites
-    Vector<Site> reducedSiteVector0 = new Vector<>();  
-    Vector<Site> reducedSiteVector1 = new Vector<>();  
+    ArrayList<Site> activeSiteVector = new ArrayList<>();  // List of sites that are actively considered
+    ArrayList<Site> variableSiteVector = new ArrayList<>(); // List of all variable sites
+    ArrayList<Site> reducedSiteVector0 = new ArrayList<>();
+    ArrayList<Site> reducedSiteVector1 = new ArrayList<>();
     int nHaplo = 3; // Number of haplotypes
-    Vector<Assignment> assignmentVector = null;   // Vectir if assignments
+    ArrayList<Assignment> assignmentVector = null;   // Vectir if assignments
     int[] nAssignDiffBases = null;
     int nTimePoints = 0;   // Number of time points
     double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
@@ -41,15 +42,15 @@ public class DataSet implements MultivariateFunction {
     
     double currentLogLikelihood = 0.0;
 
-    DataSet(String fileNameFile, int nHaplo, Vector<Assignment> assignmentVector, 
+    DataSet(String fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
             int[] nAssignDiffBases, double[] useFrac) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.useFrac = useFrac;
         this.nAssignDiffBases = nAssignDiffBases;
-        Vector<String> fileNameVector = new Vector<String>(); // list of files to be read in one for each time point
-        Vector<Integer> allSiteVector = new Vector<>();// List of all sites 
-        Hashtable<Integer, Site> siteHash = new Hashtable<Integer, Site>();  // Data of sites labeled by site number
+        ArrayList<String> fileNameVector = new ArrayList<String>(); // list of files to be read in one for each time point
+        ArrayList<Integer> allSiteVector = new ArrayList<>();// List of all sites
+        HashMap<Integer, Site> siteHash = new HashMap<Integer, Site>();  // Data of sites labeled by site number
         priors[1] = Math.log(0.9 / (nAssignDiffBases[1]+1.0E-20));
         priors[2] = Math.log(0.07 / (nAssignDiffBases[2]+1.0E-20));
         priors[3] = Math.log(0.02 / (nAssignDiffBases[3]+1.0E-20));
@@ -90,7 +91,7 @@ public class DataSet implements MultivariateFunction {
                             line = buff.readLine();
                         }
                         int iSite = Integer.parseInt(line.split(",")[0]);
-                        if (!siteHash.contains(iSite)) {   // list of sites that contain data
+                        if (!siteHash.containsKey(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
                             siteHash.put(iSite, newSite);

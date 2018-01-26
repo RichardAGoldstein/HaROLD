@@ -1,8 +1,8 @@
 package rag.cluster;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.Vector;
 import org.apache.commons.math3.optim.InitialGuess;
 import org.apache.commons.math3.optim.MaxEval;
 import org.apache.commons.math3.optim.OptimizationData;
@@ -21,11 +21,11 @@ public class Cluster {
     int nHaplo = 3; // Number of haplotypes, revised based on command line arguement
     int nTimePoints = 0;  // Number of timepoints, revised based on data
     
-    Vector<Assignment> assignmentVector = new Vector<>();  // Vector of all possible assignments
+    ArrayList<Assignment> assignmentVector = new ArrayList<>();  // Vector of all possible assignments
     int[] nAssignDiffBases = new int[5]; // Number of assignments with a given number of bases
     DataSet dataSet = null;  // Class for holding and manipulating sequence data
-    static Random random = new Random(435027);  
-    
+    // static Random random = new Random(435027);
+    static Random random = new Random();
     static boolean verbose = false; // Print lots of intermediate results
     static double[] useFrac = {0.01, 0.1};  // What fraction of sites to use for global parameters (chosen randomly) 
                                             // First number is for first iteration, second is for later iterations
@@ -41,8 +41,14 @@ public class Cluster {
      * @param args File containing list of files and number of haplotypes
      */
     public static void main(String[] args) {
+        long start = System.currentTimeMillis();
         Cluster cluster = new Cluster(args);
+        long end = System.currentTimeMillis();
+        System.out.printf("%f s\n", (end - start) / 1000.0);
+
         cluster.run();
+        end = System.currentTimeMillis();
+        System.out.printf("%f s\n", (end - start) / 1000.0);
     }
 
     /**
@@ -60,8 +66,15 @@ public class Cluster {
             optimiseAlpha = false;
         }
         nHaplo = Integer.parseInt(args[1]);  // Update number of haplotypes
+        long start, end;
+        start = System.currentTimeMillis();
         constructAssignments();  // Construct possible assignments of bases to haplotypes
+        end = System.currentTimeMillis();
+        System.out.printf("constructAssignments: %f\n", (end - start)/1000.0);
+        start = System.currentTimeMillis();
         dataSet = new DataSet(args[0], nHaplo, assignmentVector, nAssignDiffBases, useFrac); // Construct dataset
+        end = System.currentTimeMillis();
+        System.out.printf("new Dataset: %f\n", (end - start)/1000.0);
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
     

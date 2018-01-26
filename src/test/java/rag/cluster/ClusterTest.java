@@ -1,0 +1,64 @@
+package rag.cluster;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+
+public class ClusterTest {
+    private Cluster cluster = null;
+    private File resourcesDir = null;
+
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+
+    private static final String TEST_RESOURCES_PATH = "src/test/resources";
+    private static final String DATA_DIRECTORY = "SmallData";
+    private static final String DATA_FILE_LIST_NAME = "FileList_AAA";
+
+    @Before
+    public void setUp() {
+        this.resourcesDir = new File(TEST_RESOURCES_PATH);
+        System.setOut(new PrintStream(outContent));
+        System.setErr(new PrintStream(errContent));
+    }
+
+    @After
+    public void restoreStreams() {
+        System.setOut(System.out);
+        System.setErr(System.err);
+    }
+
+    private File getDataFiles() throws Exception {
+        String fileList = resourcesDir.getAbsolutePath() + "/" + DATA_DIRECTORY + "/" + DATA_FILE_LIST_NAME;
+        List<String> dataFiles = Files.readAllLines(Paths.get(fileList));
+
+        File tmpFile = File.createTempFile("prefix", null);
+        BufferedWriter tmpWriter = new BufferedWriter(new FileWriter(tmpFile));
+        for (String line : dataFiles) {
+            tmpWriter.write(resourcesDir + "/" + DATA_DIRECTORY + "/" + line + "\n");
+        }
+        tmpWriter.close();
+
+        return tmpFile;
+    }
+
+    @Test
+    public void clusterInstantiate() throws Exception {
+        File dataFile = getDataFiles();
+        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"});
+        boolean deleted = dataFile.delete();
+    }
+
+    @Test
+    public void clusterRun() throws Exception {
+        File dataFile = getDataFiles();
+        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"});
+        cluster.run();
+        boolean deleted = dataFile.delete();
+    }
+}
