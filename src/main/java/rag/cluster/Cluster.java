@@ -1,4 +1,4 @@
-package Cluster;
+package rag.cluster;
 
 import java.util.Arrays;
 import java.util.Random;

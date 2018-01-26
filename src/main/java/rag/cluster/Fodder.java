@@ -3,10 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Cluster;
-
-import java.util.Arrays;
-import org.apache.commons.math3.special.Beta;
+package rag.cluster;
 
 /**
  *
@@ -158,7 +155,7 @@ public class Fodder {
 //        for (int iPoss = 0; iPoss < nPoss; iPoss++) {
 //            probs[iPoss] /= summ;
 //        }
-//        double randomNumber = Cluster.random.nextDouble();
+//        double randomNumber = rag.Cluster.random.nextDouble();
 //        for (int iPoss = 0; iPoss < nPoss-1; iPoss++) {
 //            if (probs[iPoss] > randomNumber) {
 //                return iPoss;
