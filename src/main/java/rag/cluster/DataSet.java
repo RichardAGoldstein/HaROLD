@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Hashtable;
+
 import org.apache.commons.math3.analysis.MultivariateFunction;
 
 
@@ -43,7 +43,7 @@ public class DataSet implements MultivariateFunction {
     double currentLogLikelihood = 0.0;
 
     DataSet(String fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
-            int[] nAssignDiffBases, double[] useFrac) {  // Read in data
+            int[] nAssignDiffBases, double[] useFrac, GammaCalc gammaCalc) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.useFrac = useFrac;
@@ -93,7 +93,7 @@ public class DataSet implements MultivariateFunction {
                         int iSite = Integer.parseInt(line.split(",")[0]);
                         if (!siteHash.containsKey(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
-                            Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector); // create new site if needed
+                            Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector, gammaCalc); // create new site if needed
                             siteHash.put(iSite, newSite);
                         }
                         siteHash.get(iSite).addTimePoint(iTimePoint, line);  // add datapoint to site

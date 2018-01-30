@@ -6,7 +6,6 @@
 package rag.cluster;
 
 import java.util.Arrays;
-import org.apache.commons.math3.special.Gamma;
 
 /**
  *
@@ -26,8 +25,11 @@ public class Assignment {
     double[] currentSumAlphaObs = null;
     double currentAlpha0 = 0.0;
     double currentAlphaE = 0.0;
+
+    private final GammaCalc gamma;
     
-    Assignment(int iAssign, int nHaplo) {
+    Assignment(int iAssign, int nHaplo, GammaCalc gammaCalc) {
+        this.gamma = gammaCalc;
         this.nHaplo = nHaplo;
         assign = new int[nHaplo];
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {    // Loop over possible haplotypes
@@ -77,12 +79,12 @@ public class Assignment {
     double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
         double[] logLikelihoodStrand = new double[2];
         for (int iStrand = 0; iStrand < 2; iStrand++) {
-            logLikelihoodStrand[iStrand] = Gamma.logGamma(currentSumAlphaObs[iTimePoint])
-                    - Gamma.logGamma(currentSumAlphaObs[iTimePoint] + totStrand[iStrand]);
+            logLikelihoodStrand[iStrand] = this.gamma.logGamma(currentSumAlphaObs[iTimePoint])
+                    - this.gamma.logGamma(currentSumAlphaObs[iTimePoint] + totStrand[iStrand]);
             for (int iBase = 0; iBase < 4; iBase++) {
                 if (strandReads[iStrand][iBase] > 0) {
-                    logLikelihoodStrand[iStrand] += Gamma.logGamma(currentAlphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
-                            - Gamma.logGamma(currentAlphaObs[iTimePoint][iBase]);
+                    logLikelihoodStrand[iStrand] += this.gamma.logGamma(currentAlphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
+                            - this.gamma.logGamma(currentAlphaObs[iTimePoint][iBase]);
                 }
             }          
         }

@@ -12,6 +12,7 @@ import java.util.List;
 public class ClusterTest {
     private Cluster cluster = null;
     private File resourcesDir = null;
+    private GammaCalc gamma = GammaCalc.get(0);
 
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -50,14 +51,14 @@ public class ClusterTest {
     @Test
     public void clusterInstantiate() throws Exception {
         File dataFile = getDataFiles();
-        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"});
+        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"}, gamma);
         boolean deleted = dataFile.delete();
     }
 
     @Test
     public void clusterRun() throws Exception {
         File dataFile = getDataFiles();
-        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"});
+        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"}, gamma);
         cluster.run();
         boolean deleted = dataFile.delete();
     }

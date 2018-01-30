@@ -7,7 +7,6 @@ package rag.cluster;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.apache.commons.math3.special.Gamma;
 
 
 /**
@@ -43,8 +42,11 @@ public class Site {
     boolean siteConserved = false;
     boolean[] timePointConserved = null;
     boolean[] timePointHasData = null;
-    
-    Site(int iSite, int nTimePoints, int nHaplo, ArrayList<Assignment> assignmentVector) {
+
+    private final GammaCalc gamma;
+
+    Site(int iSite, int nTimePoints, int nHaplo, ArrayList<Assignment> assignmentVector, GammaCalc gammaCalc) {
+        this.gamma = gammaCalc;
         this.iSite = iSite;
         this.nTimePoints = nTimePoints;
         this.nHaplo = nHaplo;
@@ -123,10 +125,10 @@ public class Site {
         if (siteConserved) {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    logLikelihood += priors[1] + Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
-                            + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
-                            - Gamma.logGamma(alpha0);
+                    logLikelihood += priors[1] + this.gamma.logGamma(alpha0 + 3.0 * alphaE)
+                            - this.gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
+                            + this.gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                            - this.gamma.logGamma(alpha0);
                 }
             }
             estProbDiffBases[1] = 1.0;
@@ -187,10 +189,10 @@ public class Site {
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 int[] thisStrand = totStrand[iTimePoint];
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    totalLogLikelihood += priors[1] + Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                            - Gamma.logGamma(alpha0 + 3.0 * alphaE + thisStrand[iStrand])
-                            + Gamma.logGamma(alpha0 + thisStrand[iStrand])
-                            - Gamma.logGamma(alpha0);
+                    totalLogLikelihood += priors[1] + this.gamma.logGamma(alpha0 + 3.0 * alphaE)
+                            - this.gamma.logGamma(alpha0 + 3.0 * alphaE + thisStrand[iStrand])
+                            + this.gamma.logGamma(alpha0 + thisStrand[iStrand])
+                            - this.gamma.logGamma(alpha0);
                 }
             }
             return totalLogLikelihood;
@@ -231,10 +233,10 @@ public class Site {
         double totalLogLikelihood = 0.0;
         if (siteConserved) {
             for (int iStrand = 0; iStrand < 2; iStrand++) {
-                totalLogLikelihood += priorProb[0] + Gamma.logGamma(alpha0 + 3.0 * alphaE)
-                        - Gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
-                        + Gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
-                        - Gamma.logGamma(alpha0);
+                totalLogLikelihood += priorProb[0] + this.gamma.logGamma(alpha0 + 3.0 * alphaE)
+                        - this.gamma.logGamma(alpha0 + 3.0 * alphaE + totStrand[iTimePoint][iStrand])
+                        + this.gamma.logGamma(alpha0 + totStrand[iTimePoint][iStrand])
+                        - this.gamma.logGamma(alpha0);
             }
             return totalLogLikelihood;
         }

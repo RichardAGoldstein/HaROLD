@@ -17,6 +17,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  * @author rgoldst
  */
 public class Cluster {
+
     static int maxBases = 4; // Maximum number of different bases
     int nHaplo = 3; // Number of haplotypes, revised based on command line arguement
     int nTimePoints = 0;  // Number of timepoints, revised based on data
@@ -26,7 +27,7 @@ public class Cluster {
     DataSet dataSet = null;  // Class for holding and manipulating sequence data
     // static Random random = new Random(435027);
     static Random random = new Random();
-    static boolean verbose = false; // Print lots of intermediate results
+    static boolean verbose; // Print lots of intermediate results
     static double[] useFrac = {0.01, 0.1};  // What fraction of sites to use for global parameters (chosen randomly) 
                                             // First number is for first iteration, second is for later iterations
     
@@ -37,24 +38,11 @@ public class Cluster {
     
     double finalLogLikelihood = 0.0;
 
-    /**
-     * @param args File containing list of files and number of haplotypes
-     */
-    public static void main(String[] args) {
-        long start = System.currentTimeMillis();
-        Cluster cluster = new Cluster(args);
-        long end = System.currentTimeMillis();
-        System.out.printf("%f s\n", (end - start) / 1000.0);
-
-        cluster.run();
-        end = System.currentTimeMillis();
-        System.out.printf("%f s\n", (end - start) / 1000.0);
-    }
 
     /**
     * Reads in data and initialises
     */  
-    Cluster(String[] args) {
+    Cluster(String[] args, GammaCalc gammaCalc) {
         if (args.length < 2) {
             System.out.println("First argument is file containing list of count files");
             System.out.println("Second argument is number of haplotypes");
@@ -68,11 +56,11 @@ public class Cluster {
         nHaplo = Integer.parseInt(args[1]);  // Update number of haplotypes
         long start, end;
         start = System.currentTimeMillis();
-        constructAssignments();  // Construct possible assignments of bases to haplotypes
+        constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
         end = System.currentTimeMillis();
         System.out.printf("constructAssignments: %f\n", (end - start)/1000.0);
         start = System.currentTimeMillis();
-        dataSet = new DataSet(args[0], nHaplo, assignmentVector, nAssignDiffBases, useFrac); // Construct dataset
+        dataSet = new DataSet(args[0], nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc); // Construct dataset
         end = System.currentTimeMillis();
         System.out.printf("new Dataset: %f\n", (end - start)/1000.0);
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
@@ -183,10 +171,10 @@ public class Cluster {
     /**
     * Constructs vector of all possible assignments
     */       
-    void constructAssignments() {
+    void constructAssignments(GammaCalc gammaCalc) {
         int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
         for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
-            Assignment newAssignment = new Assignment(iAssign, nHaplo);
+            Assignment newAssignment = new Assignment(iAssign, nHaplo, gammaCalc);
             assignmentVector.add(newAssignment);
             nAssignDiffBases[newAssignment.nPresent]++;
         } 
