@@ -21,14 +21,11 @@ public class Main {
             } else {
                 long startTime = System.currentTimeMillis();
 
-                String listOfFilesFile = options.countFile.getName();
-                String haplotypeCount = Integer.toString(options.haplotypes);
-
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
 
                 if (options.verbose) Cluster.verbose = true;
 
-                Cluster cluster = new Cluster(new String[]{listOfFilesFile, haplotypeCount}, gammaCalc);
+                Cluster cluster = new Cluster(options.countFile.getName(), options.haplotypes, options.initialAlphaParams, gammaCalc);
                 cluster.run();
 
                 long endTime = System.currentTimeMillis();

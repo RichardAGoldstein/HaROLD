@@ -50,15 +50,17 @@ public class ClusterTest {
 
     @Test
     public void clusterInstantiate() throws Exception {
+        Options o = new Options();
         File dataFile = getDataFiles();
-        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"}, gamma);
+        cluster = new Cluster(dataFile.getAbsolutePath(), 3, o.initialAlphaParams, this.gamma);
         boolean deleted = dataFile.delete();
     }
 
     @Test
     public void clusterRun() throws Exception {
+        Options o = new Options();
         File dataFile = getDataFiles();
-        cluster = new Cluster(new String[]{dataFile.getAbsolutePath(), "3"}, gamma);
+        cluster = new Cluster(dataFile.getAbsolutePath(), 3, o.initialAlphaParams, this.gamma);
         cluster.run();
         boolean deleted = dataFile.delete();
     }

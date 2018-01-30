@@ -19,7 +19,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
 public class Cluster {
 
     static int maxBases = 4; // Maximum number of different bases
-    int nHaplo = 3; // Number of haplotypes, revised based on command line arguement
+    final int nHaplo; // Number of haplotypes, revised based on command line argument
     int nTimePoints = 0;  // Number of timepoints, revised based on data
     
     ArrayList<Assignment> assignmentVector = new ArrayList<>();  // Vector of all possible assignments
@@ -31,10 +31,10 @@ public class Cluster {
     static double[] useFrac = {0.01, 0.1};  // What fraction of sites to use for global parameters (chosen randomly) 
                                             // First number is for first iteration, second is for later iterations
     
-    int maxIter = 10; // Maximium rounds of optimisation
+    int maxIter = 10; // Maximum rounds of optimisation
     double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
     boolean optimiseAlpha = true;
-    double[] initialAlphaParams = {100.0, 0.2};
+    double[] initialAlphaParams;
     
     double finalLogLikelihood = 0.0;
 
@@ -42,27 +42,18 @@ public class Cluster {
     /**
     * Reads in data and initialises
     */  
-    Cluster(String[] args, GammaCalc gammaCalc) {
-        if (args.length < 2) {
-            System.out.println("First argument is file containing list of count files");
-            System.out.println("Second argument is number of haplotypes");
-            System.exit(1);
-        }
-        if (args.length == 4) {
-            initialAlphaParams[0] = Double.parseDouble(args[2]);
-            initialAlphaParams[1] = Double.parseDouble(args[3]);
+    Cluster(String countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc) {
+        this.initialAlphaParams = initialAlpha;
+
+        // If we've changed the defaults, do not optimise alpha
+        if (initialAlpha[0] != Constants.DEFAULT_ALPHA_0 || initialAlpha[1] != Constants.DEFAULT_ALPHA_1) {
             optimiseAlpha = false;
         }
-        nHaplo = Integer.parseInt(args[1]);  // Update number of haplotypes
-        long start, end;
-        start = System.currentTimeMillis();
+
+        this.nHaplo = nHaplo;  // Update number of haplotypes
+
         constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
-        end = System.currentTimeMillis();
-        System.out.printf("constructAssignments: %f\n", (end - start)/1000.0);
-        start = System.currentTimeMillis();
-        dataSet = new DataSet(args[0], nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc); // Construct dataset
-        end = System.currentTimeMillis();
-        System.out.printf("new Dataset: %f\n", (end - start)/1000.0);
+        dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
     
@@ -74,11 +65,11 @@ public class Cluster {
     void run() {
         double[][] currentHapParams = initialiseHapParams();  // Start with initial nearly equal haplotype frequencies
         double[] currentAlphaParams = Arrays.copyOf(initialAlphaParams, 2);   // Initial values for alpha parameters alpha0 and alphaE
-        double[] optPoint = null;    // Array for parameters
-        double[] lb_alpha = null;    // Array for lower bounds
-        double[] ub_alpha = null;    // Array for upper bounds
+        double[] optPoint;    // Array for parameters
+        double[] lb_alpha;    // Array for lower bounds
+        double[] ub_alpha;    // Array for upper bounds
         MultivariateOptimizer optimize = null;    // Optimiser
-        OptimizationData[] parm = null;   // Optimisation parameters
+        OptimizationData[] parm;   // Optimisation parameters
         
         int iIter = 0;
         boolean finished = false;
@@ -96,7 +87,7 @@ public class Cluster {
                 // Optimise haplotype frequencies first           
                 if (nHaplo == 1) {
                 } else if (nHaplo == 2) {   // Simple single parameter optimisation for each time point
-                    double optSinglePoint = 0.5;      //  Hapltype frequency parameter
+                    double optSinglePoint;      //  Hapltype frequency parameter
                     for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) { 
                         dataSet.setOptType(1, iTimePoint, currentHapParams, currentAlphaParams, iIter);    // Tell dataSet what timePoint is being optimised
                         optSinglePoint = fmin(1.0E-8, 1.0, 1.0E-6);    // Find best value within range and tolerance
@@ -111,7 +102,6 @@ public class Cluster {
                     Arrays.fill(lb_alpha, 1.0E-8);  // Lower bound
                     ub_alpha = new double[nHaplo-1];
                     Arrays.fill(ub_alpha, 1.0);     // Upper bound
-                    optPoint = new double[nHaplo-1];
 
                     for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) {
                         dataSet.setOptType(1, iTimePoint, currentHapParams, currentAlphaParams, iIter);   // Tell dataSet what timePoint is being optimised
@@ -180,7 +170,7 @@ public class Cluster {
         } 
     }
     
-        /**
+    /**
     * Find initial values of parameters representing piHap frequencies of haplotypes
     */
     double[][] initialiseHapParams() { 
