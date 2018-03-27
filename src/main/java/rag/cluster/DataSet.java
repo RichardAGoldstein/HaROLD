@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 
 import org.apache.commons.math3.analysis.MultivariateFunction;
 
@@ -33,6 +34,7 @@ public class DataSet implements MultivariateFunction {
     double[] useFrac = {1.0, 1.0};
     int iIter = 0;
     double[] priors = new double[5];
+    private boolean verbose;
          
     String[] baseString = {"A", "C", "G", "T", " ", "-"};
         
@@ -43,11 +45,13 @@ public class DataSet implements MultivariateFunction {
     double currentLogLikelihood = 0.0;
 
     DataSet(String fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
-            int[] nAssignDiffBases, double[] useFrac, GammaCalc gammaCalc) {  // Read in data
+            int[] nAssignDiffBases, double[] useFrac, GammaCalc gammaCalc, Random random, boolean verbose) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.useFrac = useFrac;
         this.nAssignDiffBases = nAssignDiffBases;
+        this.verbose = verbose;
+
         ArrayList<String> fileNameVector = new ArrayList<String>(); // list of files to be read in one for each time point
         ArrayList<Integer> allSiteVector = new ArrayList<>();// List of all sites
         HashMap<Integer, Site> siteHash = new HashMap<Integer, Site>();  // Data of sites labeled by site number
@@ -114,10 +118,10 @@ public class DataSet implements MultivariateFunction {
             Site site = siteHash.get(iSite);
             if (site.isActive()) {    // do simple sums
                 activeSiteVector.add(site);
-                if (Cluster.random.nextDouble() < useFrac[0]) {
+                if (random.nextDouble() < useFrac[0]) {
                     reducedSiteVector0.add(site);
                 }
-                if (Cluster.random.nextDouble() < useFrac[1]) {
+                if (random.nextDouble() < useFrac[1]) {
                     reducedSiteVector1.add(site);
                 }
                 if (!site.siteConserved) {
@@ -165,7 +169,7 @@ public class DataSet implements MultivariateFunction {
         this.optTimePoint = optTimePoint;
         this.iIter = iIter;
         updateAllParams(hapParams, alphaParams);
-        if (Cluster.verbose) {
+        if (this.verbose) {
             System.out.println("ggg\t" + iIter + "\t" + optType + "\t" + optTimePoint);
         }
         iCount = 0;
@@ -173,7 +177,7 @@ public class DataSet implements MultivariateFunction {
 
     private int assignHaplotypesCount = 0;
     double assignHaplotypes() {
-        if (Cluster.verbose) {
+        if (this.verbose) {
             System.out.print(Arrays.toString(currentAlphaParams));
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
@@ -214,7 +218,7 @@ public class DataSet implements MultivariateFunction {
             }
         }
 
-        if (Cluster.verbose) {
+        if (this.verbose) {
             System.out.print("hhh");
             for (int iCount = 1; iCount < 5; iCount++) {
                 priors[iCount] = Math.log((count[iCount]/(activeSiteVector.size()
@@ -251,7 +255,7 @@ public class DataSet implements MultivariateFunction {
         if (optType == 0) {
             updateAlphaParams(params);
             double val = computeTotalLogLikelihood();
-            if (iCount % 10 == 0 && Cluster.verbose) {
+            if (iCount % 10 == 0 && this.verbose) {
                 System.out.print(Arrays.toString(currentAlphaParams));
                 for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                         System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
@@ -265,7 +269,7 @@ public class DataSet implements MultivariateFunction {
         } else if (optType == 1) {
             updateSingleHapParams(optTimePoint, params);
             double val = computeTotalLogLikelihood();
-            if (Cluster.verbose && iCount % 10 == 0) {
+            if (this.verbose && iCount % 10 == 0) {
                 System.out.print(Arrays.toString(currentAlphaParams));
                 for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                         System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));

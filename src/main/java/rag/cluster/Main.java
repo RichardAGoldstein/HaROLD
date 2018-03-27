@@ -24,8 +24,6 @@ public class Main {
                 System.out.printf("seed: %d\n", options.randomSeed);
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
 
-                if (options.verbose) Cluster.verbose = true;
-
                 Cluster cluster = new Cluster(options.countFile.getName(), options.haplotypes, options.initialAlphaParams, gammaCalc, options.randomSeed, options.verbose);
                 cluster.run();
 

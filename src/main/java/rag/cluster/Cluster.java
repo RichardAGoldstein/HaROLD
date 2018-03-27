@@ -27,10 +27,9 @@ public class Cluster {
     DataSet dataSet = null;  // Class for holding and manipulating sequence data
     // static Random random = new Random(435027);
 
-    static Random random;
+    private Random random;
 
-    static boolean verbose; // Print lots of intermediate results
-    static double[] useFrac = {0.01, 0.1};  // What fraction of sites to use for global parameters (chosen randomly) 
+    private boolean verbose; // Print lots of intermediate results
                                             // First number is for first iteration, second is for later iterations
     
     int maxIter = 10; // Maximum rounds of optimisation
@@ -45,8 +44,8 @@ public class Cluster {
     * Reads in data and initialises
     */  
     Cluster(String countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc, long randomSeed, boolean verbose) {
-        Cluster.random = new Random(randomSeed);
-        Cluster.verbose = verbose;
+        this.random = new Random(randomSeed);
+        this.verbose = verbose;
 
         this.initialAlphaParams = initialAlpha;
 
@@ -59,7 +58,7 @@ public class Cluster {
         System.out.printf("haplotypes: %d\n", this.nHaplo);
 
         constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
-        dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc); // Construct dataset
+        dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc, random, verbose); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
     
@@ -169,7 +168,7 @@ public class Cluster {
     void constructAssignments(GammaCalc gammaCalc) {
         int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
         for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
-            Assignment newAssignment = new Assignment(iAssign, nHaplo, gammaCalc);
+            Assignment newAssignment = new Assignment(iAssign, nHaplo, gammaCalc, verbose);
             assignmentVector.add(newAssignment);
             nAssignDiffBases[newAssignment.nPresent]++;
         } 

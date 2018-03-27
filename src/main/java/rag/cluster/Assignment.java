@@ -27,10 +27,12 @@ public class Assignment {
     double currentAlphaE = 0.0;
 
     private final GammaCalc gamma;
+    private final boolean verbose;
     
-    Assignment(int iAssign, int nHaplo, GammaCalc gammaCalc) {
+    Assignment(int iAssign, int nHaplo, GammaCalc gammaCalc, boolean verbose) {
         this.gamma = gammaCalc;
         this.nHaplo = nHaplo;
+        this.verbose = verbose;
         assign = new int[nHaplo];
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {    // Loop over possible haplotypes
             assign[iHaplo] = (iAssign / pow(Cluster.maxBases, iHaplo)) % (Cluster.maxBases);
@@ -42,7 +44,7 @@ public class Assignment {
             }
         }
         nAbsent = 4 - nPresent;
-        if (Cluster.verbose) {
+        if (this.verbose) {
             System.out.println(iAssign + "\t" + Arrays.toString(assign));
         }
     }
