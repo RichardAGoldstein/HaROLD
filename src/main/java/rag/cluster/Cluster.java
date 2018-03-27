@@ -18,26 +18,24 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
  */
 public class Cluster {
 
-    static int maxBases = 4; // Maximum number of different bases
-    final int nHaplo; // Number of haplotypes, revised based on command line argument
-    int nTimePoints = 0;  // Number of timepoints, revised based on data
+    private final int nHaplo; // Number of haplotypes, revised based on command line argument
+    private int nTimePoints = 0;  // Number of timepoints, revised based on data
     
-    ArrayList<Assignment> assignmentVector = new ArrayList<>();  // Vector of all possible assignments
-    int[] nAssignDiffBases = new int[5]; // Number of assignments with a given number of bases
-    DataSet dataSet = null;  // Class for holding and manipulating sequence data
-    // static Random random = new Random(435027);
+    private ArrayList<Assignment> assignmentVector = new ArrayList<>();  // Vector of all possible assignments
+    private int[] nAssignDiffBases = new int[5]; // Number of assignments with a given number of bases
+    private DataSet dataSet;  // Class for holding and manipulating sequence data
 
     private Random random;
-
     private boolean verbose; // Print lots of intermediate results
-                                            // First number is for first iteration, second is for later iterations
+
+    // First number is for first iteration, second is for later iterations
     
-    int maxIter = 10; // Maximum rounds of optimisation
-    double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
-    boolean optimiseAlpha = true;
-    double[] initialAlphaParams;
+    private int maxIter = 10; // Maximum rounds of optimisation
+    private double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
+    private boolean optimiseAlpha = true;
+    private double[] initialAlphaParams;
     
-    double finalLogLikelihood = 0.0;
+    private double finalLogLikelihood = 0.0;
 
 
     /**
@@ -58,7 +56,7 @@ public class Cluster {
         System.out.printf("haplotypes: %d\n", this.nHaplo);
 
         constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
-        dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc, random, verbose); // Construct dataset
+        dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, gammaCalc, random, verbose); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
     

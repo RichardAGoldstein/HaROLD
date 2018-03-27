@@ -21,34 +21,34 @@ import org.apache.commons.math3.analysis.MultivariateFunction;
  * @author rgoldst
  */
 public class DataSet implements MultivariateFunction {
-    ArrayList<Site> activeSiteVector = new ArrayList<>();  // List of sites that are actively considered
-    ArrayList<Site> variableSiteVector = new ArrayList<>(); // List of all variable sites
-    ArrayList<Site> reducedSiteVector0 = new ArrayList<>();
-    ArrayList<Site> reducedSiteVector1 = new ArrayList<>();
-    int nHaplo = 3; // Number of haplotypes
-    ArrayList<Assignment> assignmentVector = null;   // Vectir if assignments
-    int[] nAssignDiffBases = null;
     int nTimePoints = 0;   // Number of time points
-    double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
-    double[][] currentPiHap = null;
-    double[] useFrac = {1.0, 1.0};
-    int iIter = 0;
-    double[] priors = new double[5];
+
+    private ArrayList<Site> activeSiteVector = new ArrayList<>();  // List of sites that are actively considered
+    private ArrayList<Site> variableSiteVector = new ArrayList<>(); // List of all variable sites
+    private ArrayList<Site> reducedSiteVector0 = new ArrayList<>();
+    private ArrayList<Site> reducedSiteVector1 = new ArrayList<>();
+    private int nHaplo = 3; // Number of haplotypes
+    private ArrayList<Assignment> assignmentVector = null;   // Vectir if assignments
+    private int[] nAssignDiffBases = null;
+    private double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
+    private double[][] currentPiHap = null;
+    private double[] useFrac = Constants.USE_FRAC;
+    private int iIter = 0;
+    private double[] priors = new double[5];
     private boolean verbose;
          
-    String[] baseString = {"A", "C", "G", "T", " ", "-"};
+    private String[] baseString = {"A", "C", "G", "T", " ", "-"};
         
-    int optType = 0;  // 0 for optimising alpha0 and alphaE, 1 for optimising haplotype frequencies
-    int optTimePoint = 0;   // if optType = 1, what timePoint is being optimised 
-    int iCount = 0;  // How many iterations of optimiser have been finished
+    private int optType = 0;  // 0 for optimising alpha0 and alphaE, 1 for optimising haplotype frequencies
+    private int optTimePoint = 0;   // if optType = 1, what timePoint is being optimised
+    private int iCount = 0;  // How many iterations of optimiser have been finished
     
-    double currentLogLikelihood = 0.0;
+    private double currentLogLikelihood = 0.0;
 
     DataSet(String fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
-            int[] nAssignDiffBases, double[] useFrac, GammaCalc gammaCalc, Random random, boolean verbose) {  // Read in data
+            int[] nAssignDiffBases, GammaCalc gammaCalc, Random random, boolean verbose) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
-        this.useFrac = useFrac;
         this.nAssignDiffBases = nAssignDiffBases;
         this.verbose = verbose;
 

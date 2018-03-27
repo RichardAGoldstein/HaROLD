@@ -16,32 +16,32 @@ import java.util.Arrays;
  */
 public class Site {   
     int iSite;
-    int nTimePoints;
-    int nHaplo = 0;
-    int nBases = 0;
-    ArrayList<Assignment> assignmentVector;
-    ArrayList<Assignment> localAssignmentVector = new ArrayList<>();
-    double[] probAssignment = null;
-    double[] priorProb = new double[2];
-    int nAssignments = 0;
-    String[] baseString = {"A", "C", "G", "T"};
     double[] estProbDiffBases = new double[5];
-    
-    
-    int[][][] strandReads = null; // [tp][strand][base] top two sets of reads on each strand
-    int[][] totStrand = null; // [tp][strand] number of reads on each strand
-    int[][] reads = null; // [tp][base]
-    int[] totReads = null; // [tp]
-    int[] timePointConservedBase = null; 
-
-    
-    boolean siteActive = false;
-    int nPresentBase = 0;   // number of present bases
     int conservedBase = -9;
-    boolean[] presentBase = new boolean[4];
     boolean siteConserved = false;
-    boolean[] timePointConserved = null;
-    boolean[] timePointHasData = null;
+
+    private int nTimePoints;
+    private int nHaplo = 0;
+    private int nBases = 0;
+    private ArrayList<Assignment> assignmentVector;
+    private ArrayList<Assignment> localAssignmentVector = new ArrayList<>();
+    private double[] probAssignment = null;
+    private double[] priorProb = new double[2];
+    private int nAssignments = 0;
+    private String[] baseString = {"A", "C", "G", "T"};
+
+    private int[][][] strandReads = null; // [tp][strand][base] top two sets of reads on each strand
+    private int[][] totStrand = null; // [tp][strand] number of reads on each strand
+    private int[][] reads = null; // [tp][base]
+    private int[] totReads = null; // [tp]
+    private int[] timePointConservedBase = null;
+
+    private boolean siteActive = false;
+    private int nPresentBase = 0;   // number of present bases
+
+    private boolean[] presentBase = new boolean[4];
+    private boolean[] timePointConserved = null;
+    private boolean[] timePointHasData = null;
 
     private final GammaCalc gamma;
 

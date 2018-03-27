@@ -15,16 +15,17 @@ public class Assignment {
     
     int[] assign = null;
     boolean[] presentBase = new boolean[4];
-    int nHaplo = 0;
     int nPresent = 0;
-    int nAbsent = 0;
-    int nTimePoints = 0;
+
+    private int nHaplo = 0;
+    private int nAbsent = 0;
+    private int nTimePoints = 0;
     
-    double[][] currentPiNuc = null;
-    double[][] currentAlphaObs = null;
-    double[] currentSumAlphaObs = null;
-    double currentAlpha0 = 0.0;
-    double currentAlphaE = 0.0;
+    private double[][] currentPiNuc = null;
+    private double[][] currentAlphaObs = null;
+    private double[] currentSumAlphaObs = null;
+    private double currentAlpha0 = 0.0;
+    private double currentAlphaE = 0.0;
 
     private final GammaCalc gamma;
     private final boolean verbose;
@@ -35,7 +36,7 @@ public class Assignment {
         this.verbose = verbose;
         assign = new int[nHaplo];
         for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {    // Loop over possible haplotypes
-            assign[iHaplo] = (iAssign / pow(Cluster.maxBases, iHaplo)) % (Cluster.maxBases);
+            assign[iHaplo] = (iAssign / pow(Constants.MAX_BASES, iHaplo)) % (Constants.MAX_BASES);
             presentBase[assign[iHaplo]] = true;
         }       
         for (int iBase = 0; iBase < 4; iBase++) {
