@@ -26,7 +26,7 @@ public class Main {
 
                 if (options.verbose) Cluster.verbose = true;
 
-                Cluster cluster = new Cluster(options.countFile.getName(), options.haplotypes, options.initialAlphaParams, gammaCalc);
+                Cluster cluster = new Cluster(options.countFile.getName(), options.haplotypes, options.initialAlphaParams, gammaCalc, options.randomSeed, options.verbose);
                 cluster.run();
 
                 long endTime = System.currentTimeMillis();

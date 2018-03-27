@@ -26,7 +26,9 @@ public class Cluster {
     int[] nAssignDiffBases = new int[5]; // Number of assignments with a given number of bases
     DataSet dataSet = null;  // Class for holding and manipulating sequence data
     // static Random random = new Random(435027);
-    static Random random = new Random();
+
+    static Random random;
+
     static boolean verbose; // Print lots of intermediate results
     static double[] useFrac = {0.01, 0.1};  // What fraction of sites to use for global parameters (chosen randomly) 
                                             // First number is for first iteration, second is for later iterations
@@ -42,7 +44,10 @@ public class Cluster {
     /**
     * Reads in data and initialises
     */  
-    Cluster(String countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc) {
+    Cluster(String countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc, long randomSeed, boolean verbose) {
+        Cluster.random = new Random(randomSeed);
+        Cluster.verbose = verbose;
+
         this.initialAlphaParams = initialAlpha;
 
         // If we've changed the defaults, do not optimise alpha
@@ -51,6 +56,7 @@ public class Cluster {
         }
 
         this.nHaplo = nHaplo;  // Update number of haplotypes
+        System.out.printf("haplotypes: %d\n", this.nHaplo);
 
         constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
         dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, useFrac, gammaCalc); // Construct dataset
@@ -58,7 +64,6 @@ public class Cluster {
     }
     
 
-    
     /**
     * Find best assignments and haplotype frequencies
     */   

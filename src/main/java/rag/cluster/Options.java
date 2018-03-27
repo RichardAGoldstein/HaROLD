@@ -10,10 +10,11 @@ public class Options {
     @Option(names = {"-v", "--verbose"}, description = "")
     boolean verbose = false;
 
-    @Option(names = {"-c", "--count-file"}, required = true, description = "file containing list of count files")
+    // TODO: -c and -n should be n-arity inputs - make arrays
+    @Option(names = {"-c", "--count-file"}, arity = "1..*", required = true, description = "file containing list of count files")
     File countFile;
 
-    @Option(names = {"-n", "--haplotypes"}, required = true, description = "number of haplotypes")
+    @Option(names = {"-n", "--haplotypes"}, arity = "1..*", required = true, description = "number of haplotypes")
     int haplotypes;
 
     @Option(names = {"-g", "--gamma-cache"}, description = "", hidden = true)
