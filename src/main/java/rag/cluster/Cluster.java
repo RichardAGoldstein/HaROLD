@@ -28,7 +28,7 @@ public class Cluster {
     private Random random;
     private boolean verbose; // Print lots of intermediate results
 
-    // First number is for first iteration, second is for later iterations
+
     
     private int maxIter = 10; // Maximum rounds of optimisation
     private double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
@@ -59,38 +59,45 @@ public class Cluster {
         dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, gammaCalc, random, verbose); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
     }
-    
+
+    private double[][] currentHapParams;
+    private double[] currentAlphaParams;
+
+    void initialise() {
+        this.currentHapParams = initialiseHapParams();  // Start with initial nearly equal haplotype frequencies
+        this.currentAlphaParams = Arrays.copyOf(initialAlphaParams, 2);   // Initial values for alpha parameters alpha0 and alphaE
+    }
 
     /**
     * Find best assignments and haplotype frequencies
     */   
     void run() {
-        double[][] currentHapParams = initialiseHapParams();  // Start with initial nearly equal haplotype frequencies
-        double[] currentAlphaParams = Arrays.copyOf(initialAlphaParams, 2);   // Initial values for alpha parameters alpha0 and alphaE
-        double[] optPoint;    // Array for parameters
-        double[] lb_alpha;    // Array for lower bounds
-        double[] ub_alpha;    // Array for upper bounds
-        MultivariateOptimizer optimize = null;    // Optimiser
-        OptimizationData[] parm;   // Optimisation parameters
-        
+
         int iIter = 0;
-        boolean finished = false;
-        double previousLogLikelihood = 1.0E20;
-        double currentLogLikelihood = 1.0E20;
-        
-        while (!finished) {      
+        double previousLogLikelihood = Double.NEGATIVE_INFINITY;
+        double currentLogLikelihood = previousLogLikelihood;
+
+        while (true) {
             dataSet.updateAllParams(currentHapParams, currentAlphaParams);
             previousLogLikelihood = currentLogLikelihood;
             currentLogLikelihood = dataSet.assignHaplotypes();  // Find best set of assignments
             dataSet.updateFracConserved();
             if (Math.abs(previousLogLikelihood - currentLogLikelihood) < minImprovement) {
-                finished = true;
-            } else {
-                // Optimise haplotype frequencies first           
-                if (nHaplo == 1) {
-                } else if (nHaplo == 2) {   // Simple single parameter optimisation for each time point
+                break;
+            }
+
+            System.out.println("Optimising haplotype frequencies");
+            // Optimise haplotype frequencies first
+            double step1_current_lnl = currentLogLikelihood;
+            double step1_previous_lnl = Double.NEGATIVE_INFINITY;
+            while (true) {
+                if (Math.abs(step1_current_lnl - step1_previous_lnl) < minImprovement) {
+                    break;
+                }
+
+                if (nHaplo == 2) {   // Simple single parameter optimisation for each time point
                     double optSinglePoint;      //  Hapltype frequency parameter
-                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) { 
+                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                         dataSet.setOptType(1, iTimePoint, currentHapParams, currentAlphaParams, iIter);    // Tell dataSet what timePoint is being optimised
                         optSinglePoint = fmin(1.0E-8, 1.0, 1.0E-6);    // Find best value within range and tolerance
                         if (verbose) {
@@ -98,84 +105,99 @@ public class Cluster {
                         }
                         currentHapParams[iTimePoint][0] = optSinglePoint; // Update current HapParameters
                     }
-                } else {   // Multidimensional parameter optimisation for each time point
-                    optimize = new BOBYQAOptimizer(2*nHaplo-2,0.01,1.0E-6);
-                    lb_alpha = new double[nHaplo-1];
+                } else if (nHaplo > 2) {   // Multidimensional parameter optimisation for each time point
+                    MultivariateOptimizer optimize = new BOBYQAOptimizer(2 * nHaplo - 2, 0.01, 1.0E-6);
+                    double[] lb_alpha= new double[nHaplo - 1];
                     Arrays.fill(lb_alpha, 1.0E-8);  // Lower bound
-                    ub_alpha = new double[nHaplo-1];
+                    double[] ub_alpha = new double[nHaplo - 1];
                     Arrays.fill(ub_alpha, 1.0);     // Upper bound
 
                     for (int iTimePoint = 0; iTimePoint < dataSet.nTimePoints; iTimePoint++) {
                         dataSet.setOptType(1, iTimePoint, currentHapParams, currentAlphaParams, iIter);   // Tell dataSet what timePoint is being optimised
-                        parm = new OptimizationData[]{       // Set up optimisation data
-                            new InitialGuess(currentHapParams[iTimePoint]),
-                            new MaxEval(1000000),
-                            GoalType.MINIMIZE,
-                            new ObjectiveFunction(dataSet),
-                            new SimpleBounds(lb_alpha,ub_alpha)};
-                        optPoint = optimize.optimize(parm).getPoint();  // Optimise
+                        OptimizationData[] parm = new OptimizationData[]{       // Set up optimisation data
+                                new InitialGuess(currentHapParams[iTimePoint]),
+                                new MaxEval(1000000),
+                                GoalType.MINIMIZE,
+                                new ObjectiveFunction(dataSet),
+                                new SimpleBounds(lb_alpha, ub_alpha)};
+                        double[] optPoint = optimize.optimize(parm).getPoint();  // Optimise
                         if (verbose) {
                             System.out.println("Optimum piParams\t" + iTimePoint + "\t" + Arrays.toString(optPoint));
                         }
-                        for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
+                        for (int iHaplo = 0; iHaplo < nHaplo - 1; iHaplo++) {
                             currentHapParams[iTimePoint][iHaplo] = optPoint[iHaplo]; // Update current parameters
                         }
-
                     }
                 }
 
-                if (optimiseAlpha) {
-                    dataSet.setOptType(0, 0, currentHapParams, currentAlphaParams, iIter);   // Instruct dataSet to optimise alpha0 and alphaE   
-                    lb_alpha = new double[2];
-                    lb_alpha[0] = 0.1;      // lower bound of alpha0
-                    lb_alpha[1] = 0.0001;   // lower bound of alphaE
-                    ub_alpha = new double[2];  
-                    ub_alpha[0] = 1000.0;  // upper bound of alpha0
-                    ub_alpha[1] = 10.0;    // upper bound of alphaE
-                    optimize = new BOBYQAOptimizer(2*2,0.01,1.0E-6);
-
-                    parm = new OptimizationData[]{
-                        new InitialGuess(currentAlphaParams),
-                        new MaxEval(1000000),
-                        GoalType.MINIMIZE,
-                        new ObjectiveFunction(dataSet),
-                        new SimpleBounds(lb_alpha,ub_alpha)};
-                    optPoint = optimize.optimize(parm).getPoint();  // Optimise alpha0, alphaE, f
-                    if (verbose) {
-                        System.out.println("Optimimum alphaParams:\t" + Arrays.toString(optPoint));
-                    }
-                    currentAlphaParams[0] = optPoint[0];  // Update parameters
-                    currentAlphaParams[1] = optPoint[1];
-                }
-                
-                iIter++;
-                if (iIter == maxIter) {
-                    finished = true;
-                }
+                dataSet.updateAllParams(currentHapParams, currentAlphaParams);
+                step1_previous_lnl = step1_current_lnl;
+                step1_current_lnl = dataSet.assignHaplotypes();  // Find best set of assignments
             }
-        }        
+
+            if (optimiseAlpha) {
+                optimiseAlpha(iIter);
+            }
+
+            iIter++;
+            if (iIter == maxIter) {
+                break;
+            }
+        }
         dataSet.setOptType(2, 0, currentHapParams, currentAlphaParams, 0);
         dataSet.updateAllParams(currentHapParams, currentAlphaParams);
         finalLogLikelihood = dataSet.assignHaplotypes();  // Find best set of assignments and calculate loglikelihood
         dataSet.printResults();
     }
 
+    private void optimiseAlpha(int iIter) {
+        double[] lb_alpha;
+        double[] ub_alpha;
+        MultivariateOptimizer optimize;
+        OptimizationData[] parm;
+        double[] optPoint;
+        System.out.println("Optimising alpha error");
+        dataSet.setOptType(0, 0, currentHapParams, currentAlphaParams, iIter);   // Instruct dataSet to optimise alpha0 and alphaE
+        lb_alpha = new double[2];
+        lb_alpha[0] = 0.1;      // lower bound of alpha0
+        lb_alpha[1] = 0.0001;   // lower bound of alphaE
+        ub_alpha = new double[2];
+        ub_alpha[0] = 1000.0;  // upper bound of alpha0
+        ub_alpha[1] = 10.0;    // upper bound of alphaE
+        optimize = new BOBYQAOptimizer(2*2,0.01,1.0E-6);
+
+
+        parm = new OptimizationData[]{
+            new InitialGuess(currentAlphaParams),
+            new MaxEval(1000000),
+            GoalType.MINIMIZE,
+            new ObjectiveFunction(dataSet),
+            new SimpleBounds(lb_alpha,ub_alpha)};
+        optPoint = optimize.optimize(parm).getPoint();  // Optimise alpha0, alphaE, f
+        if (verbose) {
+            System.out.println("Optimum alpha params:\t" + Arrays.toString(optPoint));
+        }
+        currentAlphaParams[0] = optPoint[0];  // Update parameters
+        currentAlphaParams[1] = optPoint[1];
+    }
+
     /**
     * Constructs vector of all possible assignments
     */       
-    void constructAssignments(GammaCalc gammaCalc) {
-        int nAssignments = pow(maxBases, nHaplo);  // Theoretical exhaustive number of possible assignments
+    private void constructAssignments(GammaCalc gammaCalc) {
+        int nAssignments = pow(Constants.MAX_BASES, nHaplo);  // Theoretical exhaustive number of possible assignments
         for (int iAssign = 0; iAssign < nAssignments; iAssign++) {  // Loop over all possible assignments
             Assignment newAssignment = new Assignment(iAssign, nHaplo, gammaCalc, verbose);
             assignmentVector.add(newAssignment);
             nAssignDiffBases[newAssignment.nPresent]++;
-        } 
+        }
+        System.out.println("assignments: " + assignmentVector.size());
     }
     
     /**
     * Find initial values of parameters representing piHap frequencies of haplotypes
     */
-    double[][] initialiseHapParams() { 
+    private double[][] initialiseHapParams() {
         double remaining = 1.0;
         double[][] hapParams = new double[nTimePoints][nHaplo-1];  // Parameters encoding haplotype frequencies
         for (int iHaplo = 0; iHaplo < nHaplo-1; iHaplo++) {
@@ -190,7 +212,7 @@ public class Cluster {
     /**
     * Computes a^b
     */
-    int pow (int a, int b) {  // Computes powers
+    private int pow (int a, int b) {  // Computes powers
         if ( b == 0)     return 1;
         if ( b == 1)     return a;
         if (b%2 == 0)    return     pow ( a * a, b/2); //even a=(a^2)^b/2
@@ -201,7 +223,7 @@ public class Cluster {
     * Brent algorithm for maximising a function in one dimension
     * Adapted from Apache Commons
     */    
-    double fmin (double a, double b, double tol) {
+    private double fmin (double a, double b, double tol) {
         double c,d,e,eps,xm,p,q,r,tol1,t2, u,v,w,fu,fv,fw,fx,x,tol3;
 
         c = .5*(3.0 - Math.sqrt(5.0));

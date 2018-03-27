@@ -25,6 +25,7 @@ public class Main {
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
 
                 Cluster cluster = new Cluster(options.countFile.getName(), options.haplotypes, options.initialAlphaParams, gammaCalc, options.randomSeed, options.verbose);
+                cluster.initialise();
                 cluster.run();
 
                 long endTime = System.currentTimeMillis();
