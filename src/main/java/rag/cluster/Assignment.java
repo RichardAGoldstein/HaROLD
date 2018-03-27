@@ -80,13 +80,15 @@ public class Assignment {
     
     double computeAssignmentLogLikelihood(int iTimePoint, int[][] strandReads, int[] reads, int[] totStrand, boolean siteConserved ) {
         double[] logLikelihoodStrand = new double[2];
+        double g1 = this.gamma.logGamma(currentSumAlphaObs[iTimePoint]);
+        double[] currentAlphaObs_iTimePoint = currentAlphaObs[iTimePoint];
+
         for (int iStrand = 0; iStrand < 2; iStrand++) {
-            logLikelihoodStrand[iStrand] = this.gamma.logGamma(currentSumAlphaObs[iTimePoint])
-                    - this.gamma.logGamma(currentSumAlphaObs[iTimePoint] + totStrand[iStrand]);
+            logLikelihoodStrand[iStrand] = g1 - this.gamma.logGamma(currentSumAlphaObs[iTimePoint] + totStrand[iStrand]);
             for (int iBase = 0; iBase < 4; iBase++) {
                 if (strandReads[iStrand][iBase] > 0) {
-                    logLikelihoodStrand[iStrand] += this.gamma.logGamma(currentAlphaObs[iTimePoint][iBase] + strandReads[iStrand][iBase])
-                            - this.gamma.logGamma(currentAlphaObs[iTimePoint][iBase]);
+                    logLikelihoodStrand[iStrand] += this.gamma.logGamma(currentAlphaObs_iTimePoint[iBase] + strandReads[iStrand][iBase])
+                            - this.gamma.logGamma(currentAlphaObs_iTimePoint[iBase]);
                 }
             }          
         }

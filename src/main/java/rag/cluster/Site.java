@@ -186,13 +186,13 @@ public class Site {
         double alphaE = alphaParams[1];
         double totalLogLikelihood = 0.0; 
         if (siteConserved) {
+            double g1 = priors[1] + this.gamma.logGamma(alpha0 + 3.0 * alphaE) - this.gamma.logGamma(alpha0);
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 int[] thisStrand = totStrand[iTimePoint];
                 for (int iStrand = 0; iStrand < 2; iStrand++) {
-                    totalLogLikelihood += priors[1] + this.gamma.logGamma(alpha0 + 3.0 * alphaE)
+                    totalLogLikelihood += g1
                             - this.gamma.logGamma(alpha0 + 3.0 * alphaE + thisStrand[iStrand])
-                            + this.gamma.logGamma(alpha0 + thisStrand[iStrand])
-                            - this.gamma.logGamma(alpha0);
+                            + this.gamma.logGamma(alpha0 + thisStrand[iStrand]) ;
                 }
             }
             return totalLogLikelihood;
