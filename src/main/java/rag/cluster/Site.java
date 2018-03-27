@@ -169,7 +169,8 @@ public class Site {
         for (int nBase = 1; nBase < 5; nBase++) {
             estProbDiffBases[nBase] /= estProbDiffBases[0];
         }
-        if (false && Cluster.verbose) {
+
+        if (false) {
             System.out.print(iSite);
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
                 System.out.print("\t" + Arrays.toString(reads[iTimePoint]));
