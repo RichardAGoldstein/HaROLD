@@ -21,6 +21,7 @@ public class Main {
             } else {
                 long startTime = System.currentTimeMillis();
 
+                System.out.printf("seed: %d\n", options.randomSeed);
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
 
                 if (options.verbose) Cluster.verbose = true;

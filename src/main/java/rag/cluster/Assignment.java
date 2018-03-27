@@ -42,7 +42,9 @@ public class Assignment {
             }
         }
         nAbsent = 4 - nPresent;
-        System.out.println(iAssign + "\t" + Arrays.toString(assign));
+        if (Cluster.verbose) {
+            System.out.println(iAssign + "\t" + Arrays.toString(assign));
+        }
     }
     
     void setAllParams(double[][] piHap, double[] alphaParams) {

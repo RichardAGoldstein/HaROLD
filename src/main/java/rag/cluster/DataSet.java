@@ -105,6 +105,10 @@ public class DataSet implements MultivariateFunction {
                 System.exit(1);
             }
         }
+
+        System.out.printf("timepoints: %d\n", nTimePoints);
+        System.out.printf("sites: %d\n", siteHash.size());
+
         
         for (int iSite : allSiteVector) {  // Create activeSiteVector
             Site site = siteHash.get(iSite);
@@ -161,10 +165,13 @@ public class DataSet implements MultivariateFunction {
         this.optTimePoint = optTimePoint;
         this.iIter = iIter;
         updateAllParams(hapParams, alphaParams);
-        System.out.println("ggg\t" + iIter + "\t" + optType + "\t" + optTimePoint);
+        if (Cluster.verbose) {
+            System.out.println("ggg\t" + iIter + "\t" + optType + "\t" + optTimePoint);
+        }
         iCount = 0;
     }
- 
+
+    private int assignHaplotypesCount = 0;
     double assignHaplotypes() {
         if (Cluster.verbose) {
             System.out.print(Arrays.toString(currentAlphaParams));
@@ -177,7 +184,8 @@ public class DataSet implements MultivariateFunction {
         for (Site site : activeSiteVector) {
             currentLogLikelihood += site.assignHaplotypes(currentAlphaParams, priors);
         }
-        System.out.println("zzz\t" + currentLogLikelihood);
+        System.out.printf("opt (%d) lnL: %.9f\n", assignHaplotypesCount, currentLogLikelihood);
+        assignHaplotypesCount++;
         return currentLogLikelihood;
     }
 
@@ -205,13 +213,16 @@ public class DataSet implements MultivariateFunction {
                 }
             }
         }
-        System.out.print("hhh");
-        for (int iCount = 1; iCount < 5; iCount++) {
-            priors[iCount] = Math.log((count[iCount]/(activeSiteVector.size() 
-                    * (nAssignDiffBases[iCount]+1.0E-20))));
-            System.out.print("\t" + Math.exp(priors[iCount]));
-        }     
-        System.out.println();
+
+        if (Cluster.verbose) {
+            System.out.print("hhh");
+            for (int iCount = 1; iCount < 5; iCount++) {
+                priors[iCount] = Math.log((count[iCount]/(activeSiteVector.size()
+                        * (nAssignDiffBases[iCount]+1.0E-20))));
+                System.out.print("\t" + Math.exp(priors[iCount]));
+            }
+            System.out.println();
+        }
     }
     
     /**
@@ -240,14 +251,12 @@ public class DataSet implements MultivariateFunction {
         if (optType == 0) {
             updateAlphaParams(params);
             double val = computeTotalLogLikelihood();
-            if (iCount % 10 == 0) {
-                if (Cluster.verbose) {
-                    System.out.print(Arrays.toString(currentAlphaParams));
-                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                            System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
-                    }
-                    System.out.println();
+            if (iCount % 10 == 0 && Cluster.verbose) {
+                System.out.print(Arrays.toString(currentAlphaParams));
+                for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                        System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
                 }
+                System.out.println();
                 System.out.print("yyy\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }
@@ -256,14 +265,12 @@ public class DataSet implements MultivariateFunction {
         } else if (optType == 1) {
             updateSingleHapParams(optTimePoint, params);
             double val = computeTotalLogLikelihood();
-            if (iCount % 10 == 0) {
-                if (Cluster.verbose) {
-                    System.out.print(Arrays.toString(currentAlphaParams));
-                    for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
-                            System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
-                    }
-                    System.out.println();
+            if (Cluster.verbose && iCount % 10 == 0) {
+                System.out.print(Arrays.toString(currentAlphaParams));
+                for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+                        System.out.print("  " + Arrays.toString(currentPiHap[iTimePoint]));
                 }
+                System.out.println();
                 System.out.print("xxx\t" + Arrays.toString(params));
                 System.out.println("\t" + val);
             }
@@ -301,7 +308,7 @@ public class DataSet implements MultivariateFunction {
             System.out.println();
         }
         
-        if (false) {
+        if (true) {
             System.out.println("Haplotypes");
             int nSites = 0;
             for (Site site : activeSiteVector) {
@@ -334,16 +341,20 @@ public class DataSet implements MultivariateFunction {
                     }
                 }
             }
-            if (false) {
+            if (true) {
                 for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                     System.out.println(">Haplo_" + iHaplo);
                     for (int iSite = 0; iSite < nSites; iSite++) {
-                        System.out.print(baseString[bestBase[iHaplo][iSite]]);              
+                        System.out.print(baseString[bestBase[iHaplo][iSite]]);
+                        if ((iSite + 1) % 80 == 0) {
+                            System.out.println();
+                        }
                     }
                     System.out.println();
                 }
             }
 
+            /*
             for (Site site : variableSiteVector) {
                 int iSite = site.iSite;
                 System.out.print(iSite);
@@ -358,6 +369,7 @@ public class DataSet implements MultivariateFunction {
                 }
                 System.out.println();
             }
+            */
         }
         
         
