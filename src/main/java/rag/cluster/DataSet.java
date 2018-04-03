@@ -110,8 +110,7 @@ public class DataSet implements MultivariateFunction {
             }
         }
 
-        System.out.printf("timepoints: %d\n", nTimePoints);
-        System.out.printf("sites: %d\n", siteHash.size());
+        this.siteCount = siteHash.size();
 
         
         for (int iSite : allSiteVector) {  // Create activeSiteVector
@@ -130,7 +129,9 @@ public class DataSet implements MultivariateFunction {
             } 
         }
     }
-    
+
+    final int siteCount;
+
     double computeTotalLogLikelihood() {
         double totalLogLikelihood = 0.0;
         if (optType == 0 && iIter == 0 && useFrac[0] < 0.99999) {
@@ -188,7 +189,7 @@ public class DataSet implements MultivariateFunction {
         for (Site site : activeSiteVector) {
             currentLogLikelihood += site.assignHaplotypes(currentAlphaParams, priors);
         }
-        System.out.printf("opt (%d) lnL: %.9f\n", assignHaplotypesCount, currentLogLikelihood);
+        // System.out.printf("opt (%d) lnL: %.9f\n", assignHaplotypesCount, currentLogLikelihood);
         assignHaplotypesCount++;
         return currentLogLikelihood;
     }
@@ -293,7 +294,7 @@ public class DataSet implements MultivariateFunction {
     }
   
     void printResults() {
-        System.out.println("\n\n\nResults for nHaplotypes = " + nHaplo);
+        System.out.println("\nResults for nHaplotypes = " + nHaplo);
         int nParams = 3 + (nHaplo-1)*nTimePoints;
         System.out.println("Number of adjustable parameters: " + nParams);
         System.out.println("Final likelihood: " + currentLogLikelihood);
@@ -411,8 +412,12 @@ public class DataSet implements MultivariateFunction {
     int getNTimePoints() {
         return nTimePoints;
     }
-    
-}    
+
+
+    public int getSiteCount() {
+        return siteCount;
+    }
+}
     
 
 
