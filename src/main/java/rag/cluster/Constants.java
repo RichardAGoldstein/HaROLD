@@ -10,5 +10,7 @@ public class Constants {
     // What fraction of sites to use for global parameters (chosen randomly);
     // First number is for first iteration, second is for later iterations}
     public static final double[] USE_FRAC = {1.0, 1.0}; //{0.01, 0.1};
+
+    public static final double DEFAULT_TOL = 1e-3;
 }
 

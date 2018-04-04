@@ -37,5 +37,8 @@ public class Options {
 
     @Option(names = {"--threads"})
     int threads = 1;
+
+    @Option(names = {"--tol"})
+    double tol = Constants.DEFAULT_TOL;
 }
 

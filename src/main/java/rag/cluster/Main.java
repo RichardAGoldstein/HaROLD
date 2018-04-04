@@ -75,7 +75,7 @@ public class Main {
     private void optimise(List<Cluster> clusters, Options options) {
         final ExecutorService threadPool = Executors.newFixedThreadPool(options.threads);
 
-        ConvergenceChecker<PointValuePair> convergenceChecker = new SimpleValueChecker(-1, 1e-3);
+        ConvergenceChecker<PointValuePair> convergenceChecker = new SimpleValueChecker(-1, options.tol);
 
         PointValuePair previous = new PointValuePair(null, Double.NEGATIVE_INFINITY);
         int iteration = 0;
