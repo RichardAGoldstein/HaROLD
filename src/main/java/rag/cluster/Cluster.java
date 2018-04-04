@@ -1,5 +1,6 @@
 package rag.cluster;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -28,8 +29,6 @@ public class Cluster {
     private Random random;
     private boolean verbose; // Print lots of intermediate results
 
-
-    
     private int maxIter = 10; // Maximum rounds of optimisation
     private double minImprovement = 1.0;  // Minimum improvement necessary to continue optimisation
     private boolean optimiseAlpha = true;
@@ -39,12 +38,13 @@ public class Cluster {
 
     private final String name;
 
-
     /**
     * Reads in data and initialises
     */  
-    Cluster(String countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc, long randomSeed, boolean verbose) {
-        this.name = countFilesFile;
+    Cluster(File countFilesFile, int nHaplo, double[] initialAlpha, GammaCalc gammaCalc, long randomSeed, boolean verbose) {
+
+        this.name = countFilesFile.getName();
+        System.out.println(this.name + ": " + countFilesFile.getAbsolutePath());
         this.random = new Random(randomSeed);
         this.verbose = verbose;
 
@@ -58,13 +58,13 @@ public class Cluster {
         this.optimiseAlpha = false;
 
         this.nHaplo = nHaplo;  // Update number of haplotypes
-        System.out.printf("%s: haplotypes - %d\n", this.name, this.nHaplo);
+        System.out.printf("%s: haplotypes = %d\n", this.name, this.nHaplo);
 
         constructAssignments(gammaCalc);  // Construct possible assignments of bases to haplotypes
         dataSet = new DataSet(countFilesFile, nHaplo, assignmentVector, nAssignDiffBases, gammaCalc, random, verbose); // Construct dataset
         nTimePoints = dataSet.getNTimePoints();  // Number of time points in dataset
-        System.out.printf("%s: timepoints - %d\n", this.name, this.nTimePoints);
-        System.out.printf("%s: sites - %d\n", this.name, dataSet.getSiteCount());
+        System.out.printf("%s: timepoints = %d\n", this.name, this.nTimePoints);
+        System.out.printf("%s: sites = %d\n", this.name, dataSet.getSiteCount());
     }
 
     private double[][] currentHapParams;
@@ -138,13 +138,13 @@ public class Cluster {
         return step1_current_lnl;
     }
 
-    public double calculateCurrent(double[] currentAlphaParams) {
+    double calculateCurrent(double[] currentAlphaParams) {
         this.currentAlphaParams = currentAlphaParams;
         dataSet.updateAllParams(currentHapParams, this.currentAlphaParams);
         return this.dataSet.assignHaplotypes();
     }
 
-    public double printResults() {
+    double printResults() {
         dataSet.setOptType(2, 0, currentHapParams, currentAlphaParams, 0);
         dataSet.updateAllParams(currentHapParams, currentAlphaParams);
         finalLogLikelihood = dataSet.assignHaplotypes();  // Find best set of assignments and calculate loglikelihood
@@ -153,7 +153,7 @@ public class Cluster {
         return finalLogLikelihood;
     }
 
-    public double optimiseAlpha(int iIter, double[] alphaParams) {
+    double optimiseAlpha(int iIter, double[] alphaParams) {
         this.currentAlphaParams = alphaParams;
         this.dataSet.setOptType(0, 0, currentHapParams, currentAlphaParams, iIter);   // Instruct dataSet to optimise alpha0 and alphaE
         double val = this.dataSet.value(alphaParams);
@@ -171,9 +171,9 @@ public class Cluster {
             assignmentVector.add(newAssignment);
             nAssignDiffBases[newAssignment.nPresent]++;
         }
-        System.out.printf("%s: assignments - %d\n", name, assignmentVector.size());
+        System.out.printf("%s: assignments = %d\n", name, assignmentVector.size());
     }
-    
+
     /**
     * Find initial values of parameters representing piHap frequencies of haplotypes
     */

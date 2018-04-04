@@ -23,6 +23,9 @@ public class Options {
     @Option(names = {"-V", "--version"}, versionHelp = true, description = "")
     boolean versionRequested;
 
+    @Option(names = {"--alpha-frac"}, required = false, description = "Fraction of sites to use to optimise error parameters")
+    double alpha_frac = 1.0;
+
     @Option(names = {"-h", "-?", "--help"}, usageHelp = true, description = "give this help list")
     protected boolean helpRequested;
 

@@ -6,12 +6,13 @@
 package rag.cluster;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Random;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 import org.apache.commons.math3.analysis.MultivariateFunction;
 
@@ -45,14 +46,13 @@ public class DataSet implements MultivariateFunction {
     
     private double currentLogLikelihood = 0.0;
 
-    DataSet(String fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
+    DataSet(File fileNameFile, int nHaplo, ArrayList<Assignment> assignmentVector,
             int[] nAssignDiffBases, GammaCalc gammaCalc, Random random, boolean verbose) {  // Read in data
         this.nHaplo = nHaplo;
         this.assignmentVector = assignmentVector;
         this.nAssignDiffBases = nAssignDiffBases;
         this.verbose = verbose;
 
-        ArrayList<String> fileNameVector = new ArrayList<String>(); // list of files to be read in one for each time point
         ArrayList<Integer> allSiteVector = new ArrayList<>();// List of all sites
         HashMap<Integer, Site> siteHash = new HashMap<Integer, Site>();  // Data of sites labeled by site number
         priors[1] = Math.log(0.9 / (nAssignDiffBases[1]+1.0E-20));
@@ -60,27 +60,22 @@ public class DataSet implements MultivariateFunction {
         priors[3] = Math.log(0.02 / (nAssignDiffBases[3]+1.0E-20));
         priors[4] = Math.log(0.01 / (nAssignDiffBases[4]+1.0E-20));
 
+        List<String> fileNameVector;
+
         try {
-            FileReader file = new FileReader(fileNameFile); 
-            BufferedReader buff = new BufferedReader(file);;
-            boolean eof = false;
-            while (!eof) {
-                String line = buff.readLine();
-                if (line == null) {
-                    eof = true;
-                } else {
-                    fileNameVector.add(line); 
-                }
-            }
+            fileNameVector = Files.readAllLines(fileNameFile.toPath());
         }
         catch (IOException e) {
             System.out.println("Error: File not found (IO error)");
-            System.exit(1);
+            throw new RuntimeException(e);
         }
+
         nTimePoints = fileNameVector.size();  // Number of timepoints = number of files
 
+        String pathPrefix = Paths.get(fileNameFile.getAbsolutePath()).getParent().toString();
+
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {  // read in data files
-            String dataFile = fileNameVector.get(iTimePoint);
+            String dataFile = new File(pathPrefix, fileNameVector.get(iTimePoint)).toString();
             try{
                 FileReader file = new FileReader(dataFile);
                 BufferedReader buff = new BufferedReader(file);

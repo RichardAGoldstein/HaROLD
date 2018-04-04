@@ -6,15 +6,10 @@ import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
 import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
-import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.Pair;
 import picocli.CommandLine;
-import sun.jvm.hotspot.types.PointerType;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -37,18 +32,25 @@ public class Main {
                 cmd.printVersionHelp(System.err);
             } else {
                 long startTime = System.currentTimeMillis();
+                System.out.printf("Main: arguments = %s\n", String.join(" ", args));
 
                 // Setup
-                System.out.printf("Main: seed - %d\n", options.randomSeed);
+                System.out.printf("Main: seed = %d\n", options.randomSeed);
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
+
+                // fraction of sites to use when optimising alpha parameters
+                Constants.USE_FRAC[0] = options.alpha_frac;
+                Constants.USE_FRAC[1] = options.alpha_frac;
+
+                long fileSeed = options.randomSeed;
 
                 List<Cluster> clusters = new ArrayList<>();
                 for (int i = 0; i < options.countFile.length; i++) {
-                    Cluster cluster = new Cluster(options.countFile[i].getName(),
+                    Cluster cluster = new Cluster(options.countFile[i],
                             options.haplotypes[i],
                             options.initialAlphaParams,
                             gammaCalc,
-                            options.randomSeed,
+                            fileSeed++,
                             options.verbose);
                     cluster.initialise();
                     clusters.add(cluster);
@@ -58,7 +60,7 @@ public class Main {
                 optimise(clusters, options);
 
                 long endTime = System.currentTimeMillis();
-                System.out.printf("\nMain: Execution time = %fs", (endTime - startTime) / 1000.0);
+                System.out.printf("Main: Execution time = %.2fs\n", (endTime - startTime) / 1000.0);
             }
 
         } catch (CommandLine.ParameterException ex) {
@@ -96,7 +98,7 @@ public class Main {
 
             // optimise the error alpha parameter
             System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
-            double[] tempAlpha = optimiseAlpha(clusters, options, currentAlphaParams, threadPool);
+            double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
             currentAlphaParams[0] = tempAlpha[0];
             currentAlphaParams[1] = tempAlpha[1];
 
@@ -123,33 +125,33 @@ public class Main {
 
         threadPool.shutdown();
 
-        System.out.println("Main: Converged.");
-        System.out.println("========================= RESULTS =========================");
+        System.out.println("\nMain: Converged.");
+        System.out.println("\n\n========================= RESULTS =========================");
 
+        double finalLnl = 0;
         for (Cluster cluster : clusters) {
             System.out.println();
-            cluster.printResults();
+            finalLnl += cluster.printResults();
         }
+
+        System.out.printf("\nMain: Final total likelihood = %.7f\n", finalLnl);
     }
 
-    private double[] optimiseAlpha(List<Cluster> clusters, Options options, double[] currentAlphaParams, ExecutorService threadPool) {
+    private double[] optimiseAlpha(List<Cluster> clusters, double[] startAlpha, ExecutorService threadPool) {
         MultivariateFunction clusterAlphaOptimise = new OptimiseAlphaFunction(clusters, threadPool);
 
         double[] lb_alpha = new double[]{0.1, 0.0001};
         double[] ub_alpha = new double[]{1000.0, 10.0};
 
         MultivariateOptimizer optimize = new BOBYQAOptimizer(2*2,0.01,1e-6);
-        OptimizationData[] parm = new OptimizationData[]{
-                new InitialGuess(currentAlphaParams),
+        OptimizationData[] optimizationData = new OptimizationData[]{
+                new InitialGuess(startAlpha),
                 new MaxEval(1000000),
                 GoalType.MINIMIZE,
                 new ObjectiveFunction(clusterAlphaOptimise),
                 new SimpleBounds(lb_alpha, ub_alpha)};
-        double[] optPoint = optimize.optimize(parm).getPoint();  // Optimise alpha0, alphaE, f
 
-        currentAlphaParams[0] = optPoint[0];  // Update parameters
-        currentAlphaParams[1] = optPoint[1];
-        return currentAlphaParams;
+        return optimize.optimize(optimizationData).getPoint();
     }
 
     private class OptimiseAlphaFunction implements MultivariateFunction {
@@ -165,17 +167,11 @@ public class Main {
             List<Future<Double>> futures = new ArrayList<>();
             for (final Cluster cluster : clusters) {
                 // optimise each cluster haplotypes independently (no synchronisation req)
-                Future<Double> future = threadPool.submit(new Callable<Double>() {
-                    @Override
-                    public Double call() throws Exception {
-                        return cluster.optimiseAlpha(1, point);
-                    }
-                });
+                Future<Double> future = threadPool.submit(() -> cluster.optimiseAlpha(1, point));
                 futures.add(future);
             }
             List<Double> output = Main.getFutureResults(futures);
-            double total = output.stream().mapToDouble(Double::doubleValue).sum();
-            return total;
+            return output.stream().mapToDouble(Double::doubleValue).sum();
         }
     }
 
@@ -190,10 +186,7 @@ public class Main {
                 throw new RuntimeException(e);
             }
         }
-
         return results;
     }
-
-
 
 }
