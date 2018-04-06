@@ -34,6 +34,8 @@ public class Main {
                 long startTime = System.currentTimeMillis();
                 System.out.printf("Main: arguments = %s\n", String.join(" ", args));
 
+                validateOptions(options);
+
                 // Setup
                 System.out.printf("Main: seed = %d\n", options.randomSeed);
                 GammaCalc gammaCalc = GammaCalc.get(options.gammaCache);
@@ -70,6 +72,13 @@ public class Main {
             throw new CommandLine.ExecutionException(cmd, "Error", ex);
         }
 
+    }
+
+    private void validateOptions(Options options) {
+        if (options.countFile.length != options.haplotypes.length) {
+            String msg = String.format("You have %d files but %d haplotype numbers.\n", options.countFile.length, options.haplotypes.length);
+            throw new RuntimeException(msg);
+        }
     }
 
     private void optimise(List<Cluster> clusters, Options options) {
