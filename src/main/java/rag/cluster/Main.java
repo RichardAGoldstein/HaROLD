@@ -79,6 +79,10 @@ public class Main {
             String msg = String.format("You have %d files but %d haplotype numbers.\n", options.countFile.length, options.haplotypes.length);
             throw new RuntimeException(msg);
         }
+
+        if (options.initialAlphaParams == null) {
+            options.initialAlphaParams = new double[]{Constants.DEFAULT_ALPHA_0, Constants.DEFAULT_ALPHA_1};
+        }
     }
 
     private void optimise(List<Cluster> clusters, Options options) {
@@ -106,10 +110,12 @@ public class Main {
             System.out.printf("Main: Optimised haplotype frequencies; total = %.7f\n", total);
 
             // optimise the error alpha parameter
-            System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
-            double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
-            currentAlphaParams[0] = tempAlpha[0];
-            currentAlphaParams[1] = tempAlpha[1];
+            if (!options.fixAlpha) {
+                System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
+                double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
+                currentAlphaParams[0] = tempAlpha[0];
+                currentAlphaParams[1] = tempAlpha[1];
+            }
 
             // calculate current lnl
             futures = new ArrayList<>();
@@ -121,7 +127,12 @@ public class Main {
             output = Main.getFutureResults(futures);
             total = output.stream().mapToDouble(Double::doubleValue).sum();
 
-            System.out.printf("Main: Optimised alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
+            if (!options.fixAlpha) {
+                System.out.printf("Main: Optimised alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
+            } else {
+                System.out.printf("Main: Fixed alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
+            }
+
 
             PointValuePair current = new PointValuePair(null, total);
 

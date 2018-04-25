@@ -4,6 +4,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.io.File;
+import java.util.Arrays;
 
 @Command(name = "richards-haplotype-model", footer = "Copyright (c) 2018 Richard A Goldstein", description = "", version = "1.0")
 public class Options {
@@ -32,8 +33,12 @@ public class Options {
     @Option(names = {"-s", "--seed"}, description = "")
     long randomSeed = System.currentTimeMillis();
 
+    // TODO: how to set default
     @Option(names = {"-a", "--initial-alpha"}, arity = "2", description = "")
-    double[] initialAlphaParams = new double[]{Constants.DEFAULT_ALPHA_0, Constants.DEFAULT_ALPHA_1};
+    double[] initialAlphaParams;
+
+    @Option(names = {"--fix-alpha"}, description="Do not optimise the alpha error parameters")
+    boolean fixAlpha;
 
     @Option(names = {"--threads"})
     int threads = 1;
