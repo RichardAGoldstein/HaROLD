@@ -10,11 +10,11 @@
     </properties>
     <modelVersion>4.0.0</modelVersion>
     <groupId>rag</groupId>
-    <artifactId>haplotypes</artifactId>
+    <artifactId>harold</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
-    <name>haplotypes</name>
-    <url>https://github.com/RichardAGoldstein/Haplotypes</url>
+    <name>HaROLD</name>
+    <url>https://github.com/RichardAGoldstein/HaROLD</url>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>

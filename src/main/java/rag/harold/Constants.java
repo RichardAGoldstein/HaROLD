@@ -1,4 +1,4 @@
-package rag.cluster;
+package rag.harold;
 
 public class Constants {
     public static final double DEFAULT_ALPHA_0 = 0.999;
