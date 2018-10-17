@@ -5,11 +5,11 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 
-@Command(name = "HaROLD",
+@Command(name = "java -jar harold-1.0.jar",
         footer = "Copyright (c) 2018 Richard A Goldstein",
         description = "HaROLD (HAplotype Reconstruction Of Longitudinal Deep sequencing Data) " +
                 "performs haplotype reconstruction on longitudinal deep sequencing samples, by " +
-                "analysing co-varying variants in a probabilistic framework.",
+                "analysing co-varying variants in a probabilistic framework.\n\nRun using: java -jar harold-1.0.jar -c <count file> -n <no. of haplotypes>",
         version = "1.0",
         sortOptions = false,
         headerHeading = "Usage:%n%n",
@@ -17,7 +17,7 @@ import java.io.File;
         descriptionHeading = "%nDescription:%n%n",
         parameterListHeading = "%nParameters:%n",
         optionListHeading = "%nOptions:%n",
-        header = "HaROLD haplotype reconstruction")
+        header = "HaROLD haplotype reconstruction program")
 public class Options {
     @Option(names = {"-c", "--count-file"}, arity = "1..*", required = true, description = "File containing list of count files")
     File[] countFile;
