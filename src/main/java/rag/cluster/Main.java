@@ -20,6 +20,20 @@ public class Main {
         m.run(args);
     }
 
+    private static <T> List<T> getFutureResults(List<Future<T>> futures) {
+        List<T> results = new ArrayList<>();
+
+        for (Future<T> f : futures) {
+            try {
+                results.add(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
+        return results;
+    }
+
     private void run(String[] args) {
         Options options = new Options();
         CommandLine cmd = new CommandLine(options);
@@ -90,7 +104,7 @@ public class Main {
         int iteration = 0;
 
         final double[] currentAlphaParams = options.initialAlphaParams;
-                
+
         // optimise until convergence
         while (true) {
             iteration++;
@@ -106,7 +120,7 @@ public class Main {
             System.out.printf("Main: Optimised haplotype frequencies; total = %.7f\n", total);
 
             if (iteration < 2) {
-            // optimise the error alpha parameter
+                // optimise the error alpha parameter
                 System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
                 double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
                 currentAlphaParams[0] = tempAlpha[0];
@@ -123,7 +137,7 @@ public class Main {
             output = Main.getFutureResults(futures);
             total = output.stream().mapToDouble(Double::doubleValue).sum();
 
-                System.out.printf("Main: Optimised alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
+            System.out.printf("Main: Optimised alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
 
             PointValuePair current = new PointValuePair(null, total);
 
@@ -154,7 +168,7 @@ public class Main {
         double[] lb_alpha = new double[]{1.0E-10, 1.0E-10};
         double[] ub_alpha = new double[]{0.999999, 0.999999};
 
-        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*2, 0.01, 1.0E-6);
+        MultivariateOptimizer optimize = new BOBYQAOptimizer(2 * 2, 0.01, 1.0E-6);
         OptimizationData[] optimizationData = new OptimizationData[]{
                 new InitialGuess(startAlpha),
                 new MaxEval(1000000),
@@ -168,6 +182,7 @@ public class Main {
     private class OptimiseAlphaFunction implements MultivariateFunction {
         final List<Cluster> clusters;
         final ExecutorService threadPool;
+
         private OptimiseAlphaFunction(final List<Cluster> clusters, ExecutorService threadPool) {
             this.clusters = clusters;
             this.threadPool = threadPool;
@@ -184,20 +199,6 @@ public class Main {
             List<Double> output = Main.getFutureResults(futures);
             return output.stream().mapToDouble(Double::doubleValue).sum();
         }
-    }
-
-    private static <T> List<T> getFutureResults(List<Future<T>> futures) {
-        List<T> results = new ArrayList<>();
-
-        for (Future<T> f : futures) {
-            try {
-                results.add(f.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw new RuntimeException(e);
-            }
-        }
-        return results;
     }
 
 }

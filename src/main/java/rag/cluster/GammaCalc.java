@@ -7,8 +7,6 @@ import org.cache2k.integration.CacheLoader;
 
 public abstract class GammaCalc {
 
-    public abstract double logGamma(final double x);
-
     public static GammaCalc get(final int cacheSize) {
         if (cacheSize == 0) {
             return new GammaCalc() {
@@ -19,7 +17,8 @@ public abstract class GammaCalc {
             };
         } else {
             return new GammaCalc() {
-                private final Cache<Double, Double> logGammaCache = new Cache2kBuilder<Double, Double>() { }
+                private final Cache<Double, Double> logGammaCache = new Cache2kBuilder<Double, Double>() {
+                }
                         .name("logGamma")
                         .entryCapacity(cacheSize)
                         .loader(new CacheLoader<Double, Double>() {
@@ -37,5 +36,7 @@ public abstract class GammaCalc {
             };
         }
     }
+
+    public abstract double logGamma(final double x);
 }
 

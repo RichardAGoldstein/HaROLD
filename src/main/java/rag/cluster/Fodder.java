@@ -1,11 +1,10 @@
 package rag.cluster;
 
 /**
- *
  * @author rgoldst
  */
 public class Fodder {
-        
+
 //    void setParams(int iStage, double alpha_e, double beta_e, double S, double F0, double[][] alpha){
 //        alpha_e_loc = alpha_e;
 //        beta_e_loc = beta_e;
