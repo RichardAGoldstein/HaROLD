@@ -21,7 +21,7 @@ This will create a Java JAR file in the 'target' directory.
 View program options:
 
 ```
-$ java -jar target/harold-1.0-SNAPSHOT-jar-with-dependencies.jar -h
+$ java -jar harold-1.0.jar -h
 
 Usage:
 
@@ -64,7 +64,6 @@ Options:
   -v, --verbose
   -V, --version             Show version
 Copyright (c) 2018 Richard A Goldstein
-
-~/Documents/2018/haplotypes/HaROLD
 ```
+
 
