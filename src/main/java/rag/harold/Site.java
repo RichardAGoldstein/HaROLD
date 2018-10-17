@@ -200,7 +200,7 @@ public class Site {
         }
         smellBad = (actProb - estProb < -11.512); // 11.512
         if (smellBad) {
-            System.out.println("Rejected site\t" + iSite + "\t" + (actProb - estProb) + "\t" + smellBad);
+            System.out.println("Rejected site " + iSite + "\t" + (actProb - estProb));
         }
         return smellBad;
     }

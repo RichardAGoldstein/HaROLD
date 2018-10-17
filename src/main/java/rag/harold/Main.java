@@ -119,7 +119,7 @@ public class Main {
             double total = output.stream().mapToDouble(Double::doubleValue).sum();
             System.out.printf("Main: Optimised haplotype frequencies; total = %.7f\n", total);
 
-            if (iteration < 2) {
+            if (options.errorOptimiseIterations == 0 | iteration <= options.errorOptimiseIterations) {
                 // optimise the error alpha parameter
                 System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
                 double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
