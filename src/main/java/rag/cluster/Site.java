@@ -26,6 +26,7 @@ public class Site {
     private ArrayList<Assignment> assignmentVector;
     private ArrayList<Assignment> localAssignmentVector = new ArrayList<>();
     private double[] probAssignment = null;
+    double totalLogLikelihood = 0.0;
     private double[] priorProb = new double[2];
     private int nAssignments = 0;
     private String[] baseString = {"A", "C", "G", "T"};
@@ -70,10 +71,16 @@ public class Site {
         for (int iBase = 0; iBase < 4; iBase++) {   // compute various sums of reads
             for (int iStrand = 0; iStrand < 2; iStrand++) {
                 strandReads[iTimePoint][iStrand][iBase]=Integer.parseInt(words[(2*iBase)+iStrand+3]);
-                totStrand[iTimePoint][iStrand] += strandReads[iTimePoint][iStrand][iBase];
                 reads[iTimePoint][iBase] += strandReads[iTimePoint][iStrand][iBase];
+            }
+//            strandReads[iTimePoint][0][iBase] = reads[iTimePoint][iBase]/2;
+//            strandReads[iTimePoint][1][iBase] = reads[iTimePoint][iBase] - strandReads[iTimePoint][0][iBase];
+            for (int iStrand = 0; iStrand < 2; iStrand++) {
+                totStrand[iTimePoint][iStrand] += strandReads[iTimePoint][iStrand][iBase];
                 totReads[iTimePoint] += strandReads[iTimePoint][iStrand][iBase];
             }
+
+            
             if (reads[iTimePoint][iBase] > 0) {
                 conservedBase = iBase;
                 presentBase[iBase] = true;
@@ -114,12 +121,13 @@ public class Site {
                 localAssignmentVector.add(assignment);
             }
         }
+        smellTest();
         return siteActive;
     }
     
     double assignHaplotypes(double[] alphaParams, double[] priors) {
-        double alpha0 = alphaParams[0];
-        double alphaE = alphaParams[1];
+        double alpha0 = alphaParams[0]*(1.0-alphaParams[1])/alphaParams[1];
+        double alphaE = (1.0-alphaParams[0])*(1.0-alphaParams[1])/alphaParams[1];
         estProbDiffBases = new double[5];
         double logLikelihood = 0.0;
         if (siteConserved) {
@@ -151,6 +159,9 @@ public class Site {
                 bestAssign = iAssign;
             }
         }
+
+        
+        
         for (int iAssign = 0; iAssign < localAssignmentVector.size(); iAssign++) {
             probAssignment[iAssign] = Math.exp(logLikelihoodAssign[iAssign]-bestAssignVal);
             sumProb += probAssignment[iAssign];
@@ -181,11 +192,36 @@ public class Site {
         return logLikelihood;
     }
     
+    boolean smellTest() {
+        double estProb = 0.0;
+        double actProb = 0.0;
+        boolean smellBad = false;
+        for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
+            if (totReads[iTimePoint] * totStrand[iTimePoint][0]*totStrand[iTimePoint][1] > 0) {
+                for (int iBase = 0; iBase < 4; iBase++) {
+                    if (reads[iTimePoint][iBase] > 0) {
+                        estProb += this.gamma.logGamma(reads[iTimePoint][iBase] + 0.5) 
+                                - this.gamma.logGamma(reads[iTimePoint][iBase] + 1.0) - 0.5723649;
+                        actProb += -reads[iTimePoint][iBase] * 0.6931472 + this.gamma.logGamma(reads[iTimePoint][iBase]+1)
+                                - this.gamma.logGamma(1.0 + 0.5 * totReads[iTimePoint] * strandReads[iTimePoint][0][iBase] / totStrand[iTimePoint][0]) 
+                                - this.gamma.logGamma(1.0 + 0.5 * totReads[iTimePoint] * strandReads[iTimePoint][1][iBase] / totStrand[iTimePoint][1]);
+                    }
+                }
+            }
+        }
+        smellBad = (actProb - estProb < -11.512); // 11.512
+        if (smellBad) {
+            System.out.println("Rejected site\t" + iSite + "\t" + (actProb - estProb) + "\t" + smellBad);
+        }
+        return smellBad;
+    }    
+    
+    
     
     double computeSiteLogLikelihood(double[] alphaParams, double[] priors) {
-        double alpha0 = alphaParams[0];
-        double alphaE = alphaParams[1];
-        double totalLogLikelihood = 0.0; 
+        double alpha0 = alphaParams[0]*(1.0-alphaParams[1])/alphaParams[1];
+        double alphaE = (1.0-alphaParams[0])*(1.0-alphaParams[1])/alphaParams[1];
+        totalLogLikelihood = 0.0; 
         if (siteConserved) {
             double g1 = priors[1] + this.gamma.logGamma(alpha0 + 3.0 * alphaE) - this.gamma.logGamma(alpha0);
             for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
@@ -224,14 +260,15 @@ public class Site {
             
             totalLogLikelihood += bestAssignVal + Math.log(timePointLogLikelihood);
         }
+//        if (iSite == 230865) System.out.println("totalLogLikelihood B " + totalLogLikelihood);
         return totalLogLikelihood;
     }
     
     
     double computeSiteTimePointLogLikelihood(int iTimePoint, double[] alphaParams, double[] priors) {
-        double alpha0 = alphaParams[0];
-        double alphaE = alphaParams[1];
-        double totalLogLikelihood = 0.0;
+        double alpha0 = alphaParams[0]*(1.0-alphaParams[1])/alphaParams[1];
+        double alphaE = (1.0-alphaParams[0])*(1.0-alphaParams[1])/alphaParams[1];
+        totalLogLikelihood = 0.0;
         if (siteConserved) {
             for (int iStrand = 0; iStrand < 2; iStrand++) {
                 totalLogLikelihood += priorProb[0] + this.gamma.logGamma(alpha0 + 3.0 * alphaE)
@@ -277,6 +314,15 @@ public class Site {
                 Assignment assignment = localAssignmentVector.get(iAssign);
                 for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                     expectedFreq[iHaplo][assignment.assign[iHaplo]] += probAssignment[iAssign];
+                }
+            }
+        }
+        if (!siteConserved) { 
+            if (smellTest()) {
+                for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
+                    for (int iBase = 0; iBase < 4; iBase++) {
+                        expectedFreq[iHaplo][iBase] = 0.0;
+                    }
                 }
             }
         }

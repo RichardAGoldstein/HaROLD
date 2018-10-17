@@ -31,7 +31,7 @@ public class DataSet implements MultivariateFunction {
     private int nHaplo = 3; // Number of haplotypes
     private ArrayList<Assignment> assignmentVector = null;   // Vectir if assignments
     private int[] nAssignDiffBases = null;
-    private double[] currentAlphaParams = new double[3];   // alpha0 and alphaE
+    private double[] currentAlphaParams = new double[2];   // alpha0 and alphaE
     private double[][] currentPiHap = null;
     private double[] useFrac = Constants.USE_FRAC;
     private int iIter = 0;
@@ -319,6 +319,7 @@ public class DataSet implements MultivariateFunction {
             for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                 for (int iSite = 0; iSite < nSites; iSite++) {
                     bestBase[iHaplo][iSite] = 5;
+                    probBestBase[iHaplo][iSite] = 0.5;
                 }
             }
 

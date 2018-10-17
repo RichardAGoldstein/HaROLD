@@ -9,6 +9,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer;
 import picocli.CommandLine;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,10 +80,6 @@ public class Main {
             String msg = String.format("You have %d files but %d haplotype numbers.\n", options.countFile.length, options.haplotypes.length);
             throw new RuntimeException(msg);
         }
-
-        if (options.initialAlphaParams == null) {
-            options.initialAlphaParams = new double[]{Constants.DEFAULT_ALPHA_0, Constants.DEFAULT_ALPHA_1};
-        }
     }
 
     private void optimise(List<Cluster> clusters, Options options) {
@@ -94,7 +91,7 @@ public class Main {
         int iteration = 0;
 
         final double[] currentAlphaParams = options.initialAlphaParams;
-
+                
         // optimise until convergence
         while (true) {
             iteration++;
@@ -109,8 +106,8 @@ public class Main {
             double total = output.stream().mapToDouble(Double::doubleValue).sum();
             System.out.printf("Main: Optimised haplotype frequencies; total = %.7f\n", total);
 
+            if (iteration < 2) {
             // optimise the error alpha parameter
-            if (!options.fixAlpha) {
                 System.out.printf("Main: Optimise alpha; start = [%.3f, %.3f]\n", currentAlphaParams[0], currentAlphaParams[1]);
                 double[] tempAlpha = optimiseAlpha(clusters, currentAlphaParams, threadPool);
                 currentAlphaParams[0] = tempAlpha[0];
@@ -127,12 +124,7 @@ public class Main {
             output = Main.getFutureResults(futures);
             total = output.stream().mapToDouble(Double::doubleValue).sum();
 
-            if (!options.fixAlpha) {
                 System.out.printf("Main: Optimised alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
-            } else {
-                System.out.printf("Main: Fixed alpha; [%.3f, %.3f]; total = %.7f\n", currentAlphaParams[0], currentAlphaParams[1], total);
-            }
-
 
             PointValuePair current = new PointValuePair(null, total);
 
@@ -160,10 +152,10 @@ public class Main {
     private double[] optimiseAlpha(List<Cluster> clusters, double[] startAlpha, ExecutorService threadPool) {
         MultivariateFunction clusterAlphaOptimise = new OptimiseAlphaFunction(clusters, threadPool);
 
-        double[] lb_alpha = new double[]{0.1, 0.0001};
-        double[] ub_alpha = new double[]{1000.0, 10.0};
+        double[] lb_alpha = new double[]{1.0E-10, 1.0E-10};
+        double[] ub_alpha = new double[]{0.999999, 0.999999};
 
-        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*2,0.01,1e-6);
+        MultivariateOptimizer optimize = new BOBYQAOptimizer(2*2, 0.01, 1.0E-6);
         OptimizationData[] optimizationData = new OptimizationData[]{
                 new InitialGuess(startAlpha),
                 new MaxEval(1000000),

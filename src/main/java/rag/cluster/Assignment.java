@@ -55,8 +55,8 @@ public class Assignment {
         currentPiNuc = new double[nTimePoints][4];
         currentAlphaObs = new double[nTimePoints][4];
         currentSumAlphaObs = new double[nTimePoints];
-        currentAlpha0 = alphaParams[0];
-        currentAlphaE = alphaParams[1];
+        currentAlpha0 = alphaParams[0]*(1.0-alphaParams[1])/alphaParams[1];
+        currentAlphaE = (1.0-alphaParams[0])*(1.0-alphaParams[1])/alphaParams[1];
         for (int iTimePoint = 0; iTimePoint < nTimePoints; iTimePoint++) {
             setPiHap(iTimePoint, piHap[iTimePoint]);
         }

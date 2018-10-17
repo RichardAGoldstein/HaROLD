@@ -1,8 +1,8 @@
 package rag.cluster;
 
 public class Constants {
-    public static final double DEFAULT_ALPHA_0 = 100.0;
-    public static final double DEFAULT_ALPHA_1 = 0.2;
+    public static final double DEFAULT_ALPHA_0 = 0.999;
+    public static final double DEFAULT_ALPHA_1 = 0.03;
 
     // Maximum number of different bases
     public static final int MAX_BASES = 4;
