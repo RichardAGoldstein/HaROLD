@@ -30,7 +30,7 @@ public class DataSet implements MultivariateFunction {
     private int iIter = 0;
     private double[] priors = new double[5];
     private boolean verbose;
-    private String[] baseString = {"A", "C", "G", "T", " ", "-"};
+    private String[] baseString = {"A", "C", "G", "T", " ", "N"};
     private int optType = 0;  // 0 for optimising alpha0 and alphaE, 1 for optimising haplotype frequencies
     private int optTimePoint = 0;   // if optType = 1, what timePoint is being optimised
     private int iCount = 0;  // How many iterations of optimiser have been finished
@@ -328,9 +328,9 @@ public class DataSet implements MultivariateFunction {
             if (true) {
                 for (int iHaplo = 0; iHaplo < nHaplo; iHaplo++) {
                     System.out.println(">Haplo_" + iHaplo);
-                    for (int iSite = 0; iSite < nSites; iSite++) {
+                    for (int iSite = 1; iSite < nSites; iSite++) {
                         System.out.print(baseString[bestBase[iHaplo][iSite]]);
-                        if ((iSite + 1) % 80 == 0) {
+                        if ((iSite + 2) % 80 == 0) {
                             System.out.println();
                         }
                     }
