@@ -1,4 +1,4 @@
-package rag.cluster;
+package rag.harold;
 
 import org.junit.After;
 import org.junit.Before;
@@ -52,7 +52,8 @@ public class ClusterTest {
     public void clusterInstantiate() throws Exception {
         Options o = new Options();
         File dataFile = getDataFiles();
-        cluster = new Cluster(dataFile.getAbsolutePath(), 3, o.initialAlphaParams, this.gamma);
+        long seed = 1234L;
+        cluster = new Cluster(dataFile, 3, o.initialAlphaParams, this.gamma, seed, false);
         boolean deleted = dataFile.delete();
     }
 
@@ -60,7 +61,8 @@ public class ClusterTest {
     public void clusterRun() throws Exception {
         Options o = new Options();
         File dataFile = getDataFiles();
-        cluster = new Cluster(dataFile.getAbsolutePath(), 3, o.initialAlphaParams, this.gamma);
+        long seed = 1234L;
+        cluster = new Cluster(dataFile, 3, o.initialAlphaParams, this.gamma, seed, false);
         cluster.run();
         boolean deleted = dataFile.delete();
     }
