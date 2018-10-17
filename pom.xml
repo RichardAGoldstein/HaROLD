@@ -6,6 +6,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <cache2k-version>1.2.0.Final</cache2k-version>
     </properties>
     <modelVersion>4.0.0</modelVersion>
     <groupId>rag</groupId>
@@ -29,12 +30,12 @@
         <dependency>
             <groupId>org.cache2k</groupId>
             <artifactId>cache2k-all</artifactId>
-            <version>1.0.2.Final</version>
+            <version>${cache2k-version}</version>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
-            <version>2.2.1</version>
+            <version>3.6.1</version>
         </dependency>
     </dependencies>
     <build>
