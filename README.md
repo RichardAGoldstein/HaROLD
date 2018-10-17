@@ -6,7 +6,7 @@ This program performs haplotype reconstruction on longitudinal deep sequencing s
 
 HaROLD requires Java 8 (or newer). Download pre-built binaries from [releases](https://github.com/RichardAGoldstein/HaROLD/releases).
 
-Alternatively, you can clone the source and build using the following commands:
+Alternatively, you can clone the source and build using the following commands (requires [Maven](https://maven.apache.org/)):
 
 ```
 git clone https://github.com/RichardAGoldstein/HaROLD.git
