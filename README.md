@@ -41,6 +41,9 @@ HaROLD (HAplotype Reconstruction Of Longitudinal Deep sequencing Data) performs
 haplotype reconstruction on longitudinal deep sequencing samples, by analysing
 co-varying variants in a probabilistic framework.
 
+HaROLD reads in a set of files, one for each timepoint. These files should be in the
+output format of bam-readcounts.
+
 Run using: java -jar harold-1.0.jar -c <count file> -n <no. of haplotypes>
 
 Options:
