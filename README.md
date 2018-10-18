@@ -2,6 +2,10 @@
 
 This program performs haplotype reconstruction on longitudinal deep sequencing samples, by analysing co-varying variants in a probabilistic framework. 
 
+Program description and documentation available at:
+
+R. A. Goldstein, A. U. Tamuri, S. Roy, J. Breuer, 2018, Haplotype assignment of virus NGS data using co-variation of variant frequencies, _bioRxiv_ [doi: 10.1101/444877](https://www.biorxiv.org/content/early/2018/10/17/444877).
+
 ## Installation
 
 HaROLD requires Java 8 (or newer). Download pre-built binaries from [releases](https://github.com/RichardAGoldstein/HaROLD/releases).
@@ -67,18 +71,15 @@ Options:
   -v, --verbose
   -V, --version             Show version
 
-Example contains a simple example: three different timepoints of synthetically created data, 
-consisting of three different mixtures of the two CMV sequences KP745665.1 and KP745692.1.
-(See Supplementary Material in bioRxiv document for details.)
-
-e.g.(in the example folder)  java -jar harold-1.0.jar -c filelist -n 2
-
-Program description and documentation available at:
-
-R. A. Goldstein, A. U. Tamuri, S. Roy, J. Breuer, 2018, Haplotype assignment of virus NGS data using co-variation of variant frequencies, bioRxiv doi: 10.1101/444877.
-
-
 Copyright (c) 2018 Richard A Goldstein
 ```
 
+## Example
 
+The `example` directory contains a simple example: three different timepoints of synthetically created data, consisting of three different mixtures of the two CMV sequences KP745665.1 and KP745692.1. (See Supplementary Material in bioRxiv document for details.)
+
+e.g.(in the example folder):
+
+```
+java -jar harold-1.0.jar -c filelist -n 2
+```

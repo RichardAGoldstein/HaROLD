@@ -7,9 +7,14 @@ import java.io.File;
 
 @Command(name = "java -jar harold-1.0.jar",
         footer = "Copyright (c) 2018 Richard A Goldstein",
-        description = "HaROLD (HAplotype Reconstruction Of Longitudinal Deep sequencing Data) " +
-                "performs haplotype reconstruction on longitudinal deep sequencing samples, by " +
-                "analysing co-varying variants in a probabilistic framework.\n\nRun using: java -jar harold-1.0.jar -c <count file> -n <no. of haplotypes>",
+        description = "HaROLD (HAplotype Reconstruction Of Longitudinal Deep sequencing Data) performs " +
+                "haplotype reconstruction on longitudinal deep sequencing samples, by analysing " +
+                "co-varying variants in a probabilistic framework." +
+                "\n" +
+                "HaROLD reads in a set of files, one for each timepoint. These files should be in the " +
+                "output format of bam-readcounts." +
+                "\n" +
+                "Run using: java -jar harold-1.0.jar -c <count file> -n <no. of haplotypes>",
         version = "1.0",
         sortOptions = false,
         headerHeading = "Usage:%n%n",
