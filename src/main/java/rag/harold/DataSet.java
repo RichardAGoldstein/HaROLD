@@ -79,7 +79,7 @@ public class DataSet implements MultivariateFunction {
                         if (line.contains("Position")) {
                             line = buff.readLine();
                         }
-                        int iSite = Integer.parseInt(line.split(",")[0]);
+                        int iSite = Integer.parseInt(line.split("\\t")[1]);
                         if (!siteHash.containsKey(iSite)) {   // list of sites that contain data
                             allSiteVector.add(iSite);
                             Site newSite = new Site(iSite, nTimePoints, nHaplo, assignmentVector, gammaCalc); // create new site if needed

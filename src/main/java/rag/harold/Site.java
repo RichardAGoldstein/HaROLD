@@ -57,14 +57,12 @@ public class Site {
     }
 
     void addTimePoint(int iTimePoint, String line) {
-        String[] words = line.split(",");
+        String[] words = line.split("\\t");
         for (int iBase = 0; iBase < 4; iBase++) {   // compute various sums of reads
             for (int iStrand = 0; iStrand < 2; iStrand++) {
-                strandReads[iTimePoint][iStrand][iBase] = Integer.parseInt(words[(2 * iBase) + iStrand + 3]);
+                strandReads[iTimePoint][iStrand][iBase] = Integer.parseInt(words[5 + iBase].split(":")[5 + iStrand]);
                 reads[iTimePoint][iBase] += strandReads[iTimePoint][iStrand][iBase];
             }
-//            strandReads[iTimePoint][0][iBase] = reads[iTimePoint][iBase]/2;
-//            strandReads[iTimePoint][1][iBase] = reads[iTimePoint][iBase] - strandReads[iTimePoint][0][iBase];
             for (int iStrand = 0; iStrand < 2; iStrand++) {
                 totStrand[iTimePoint][iStrand] += strandReads[iTimePoint][iStrand][iBase];
                 totReads[iTimePoint] += strandReads[iTimePoint][iStrand][iBase];
@@ -248,7 +246,6 @@ public class Site {
 
             totalLogLikelihood += bestAssignVal + Math.log(timePointLogLikelihood);
         }
-//        if (iSite == 230865) System.out.println("totalLogLikelihood B " + totalLogLikelihood);
         return totalLogLikelihood;
     }
 
@@ -319,3 +316,4 @@ public class Site {
 
 
 }
+
