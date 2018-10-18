@@ -73,7 +73,7 @@ consisting of three different mixtures of the two CMV sequences KP745665.1 and K
 
 e.g.(in the example folder)  java -jar harold-1.0.jar -c filelist -n 2
 
-Program and documentation available at:
+Program description and documentation available at:
 
 R. A. Goldstein, A. U. Tamuri, S. Roy, J. Breuer, 2018, Haplotype assignment of virus NGS data using co-variation of variant frequencies, bioRxiv doi: 10.1101/444877.
 
