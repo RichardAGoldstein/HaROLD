@@ -66,6 +66,18 @@ Options:
   -h, -?, --help            Show this help
   -v, --verbose
   -V, --version             Show version
+
+Example contains a simple example: three different timepoints of synthetically created data, 
+consisting of three different mixtures of the two CMV sequences KP745665.1 and KP745692.1.
+(See Supplementary Material in bioRxiv document for details.)
+
+e.g.(in the example folder)  java -jar harold-1.0.jar -c filelist -n 2
+
+Program and documentation available at:
+
+R. A. Goldstein, A. U. Tamuri, S. Roy, J. Breuer, 2018, Haplotype assignment of virus NGS data using co-variation of variant frequencies, bioRxiv doi: 10.1101/444877.
+
+
 Copyright (c) 2018 Richard A Goldstein
 ```
 

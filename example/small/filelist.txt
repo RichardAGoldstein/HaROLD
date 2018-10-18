@@ -1,3 +1,0 @@
-patient_a_1.csv
-patient_a_5.csv
-patient_a_9.csv
